@@ -6,6 +6,8 @@ const TDSHeader = () => {
 
   useEffect(() => {
     console.log(location);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
   }, [location]);
 
   const inactive = useRef(
