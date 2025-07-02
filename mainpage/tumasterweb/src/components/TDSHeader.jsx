@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 const TDSHeader = () => {
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     console.log(location);
@@ -33,56 +32,41 @@ const TDSHeader = () => {
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 ml-10">
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                navigate("/");
-              }}
-              className={
-                location.pathname === "/" ? active.current : inactive.current
+            <NavLink
+              to="/"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
               }
             >
               首页
-            </span>
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                navigate("/course");
-              }}
-              className={
-                location.pathname === "/course"
-                  ? active.current
-                  : inactive.current
+            </NavLink>
+
+            <NavLink
+              to="/course"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
               }
             >
               课程分类
-            </span>
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                navigate("/learning_paths");
-              }}
-              className={
-                location.pathname === "/learning_paths"
-                  ? active.current
-                  : inactive.current
+            </NavLink>
+
+            <NavLink
+              to="/learning_paths"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
               }
             >
               学习路径
-            </span>
-            <span
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                navigate("/about");
-              }}
-              className={
-                location.pathname === "/about"
-                  ? active.current
-                  : inactive.current
+            </NavLink>
+
+            <NavLink
+              to="/about"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
               }
             >
               关于我们
-            </span>
+            </NavLink>
           </div>
         </div>
         <div className="flex items-center gap-4">
