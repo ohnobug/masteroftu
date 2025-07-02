@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图克教育平台 - 你的专属AI老师</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Font 'Inter' 以获得更好的字体效果 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* 为输入框的占位符光标添加闪烁动画 */
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .blinking-cursor::placeholder {
+            animation: blink 1.2s step-end infinite;
+        }
+    </style>
+</head>
+
+<body class="relative min-h-screen overflow-x-hidden bg-[#E0F7FA]">
+
+    <!-- 背景图片和渐变叠加层 -->
+    <div class="absolute inset-0 z-[-1]">
+        <div class="absolute inset-0 bg-gradient-to-b from-cyan-200 via-teal-300 to-cyan-200 opacity-40"></div>
+        <!-- 星空纹理图层 -->
+        <img src="https://bing.img.run/rand_uhd.php" alt="Starry sky texture"
+            class="w-full h-full object-cover opacity-50 mix-blend-overlay">
+    </div>
+
+
+    <!-- 顶部导航栏 -->
+    <header class="absolute top-0 left-0 right-0 p-6 z-30">
+        <nav class="flex justify-between items-center max-w-screen-xl mx-auto">
+
+            <!-- (新) 左侧容器: 包含Logo和菜单 -->
+            <div class="flex items-center">
+                <!-- 左侧Logo -->
+                <div class="flex items-center gap-3">
+                    <span class="text-black text-lg font-medium">图克教育</span>
+                    <span
+                        class="text-black/70 text-xs font-medium border border-black/30 rounded-full px-3 py-1">实验性</span>
+                </div>
+
+                <!-- 导航菜单 (现在紧贴Logo右侧) -->
+                <div class="hidden md:flex items-center gap-8 ml-10">
+                    <a href="/" class="text-black font-semibold transition-colors">首页</a>
+                    <a href="/course.html" class="text-black/80 hover:text-black font-medium transition-colors">课程分类</a>
+                    <a href="/learning_paths.html"
+                        class="text-black/80 hover:text-black font-medium transition-colors">学习路径</a>
+                    <a href="/about.html" class="text-black/80 hover:text-black font-medium transition-colors">关于我们</a>
+                </div>
+            </div>
+
+
+            <!-- 右侧图标 (保持不变) -->
+            <div class="flex items-center gap-4">
+                <!-- 网格图标 SVG -->
+                <div onclick="window.location.href='https://learn.turcar.net.cn'" style="cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-black/80" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                </div>
+                <!-- 用户头像 -->
+                <div onclick="window.location.href='https://learn.turcar.net.cn'" style="cursor: pointer;">
+                    <img src="https://img2.baidu.com/it/u=1137101923,166953968&fm=253&app=138&f=JPEG?w=500&h=500"
+                        alt="User profile" class="w-9 h-9 rounded-full" />
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="relative flex flex-col items-center justify-center min-h-screen px-4 z-10 pb-20">
+        <div class="flex flex-col items-center gap-6 text-center w-full">
+            <h1 class="text-black text-6xl md:text-7xl font-bold">Learn About</h1>
+
+            <!-- 搜索输入框 -->
+            <div class="relative w-full max-w-xl mt-2">
+                <input type="text" placeholder="请输入你的问题"
+                    class="blinking-cursor w-full bg-white rounded-full py-4 pl-8 pr-16 text-lg text-black placeholder-gray-500 shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all duration-300" />
+                <!-- 发送图标 -->
+                <button
+                    class="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 text-gray-400 hover:text-black transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 描述文本 -->
+            <div class="text-black/90 max-w-lg text-lg font-normal mt-2">
+                <div>让好奇心，成为你的向导</div>
+                <span class="inline-flex items-center"><strong class="font-semibold">你的专属AI学习伙伴</strong></span>
+                <div>有什么想知道的？现在就问我吧！</div>
+            </div>
+
+
+            <!-- "Go to Learn About" 按钮 -->
+            <button
+                class="mt-4 bg-white text-black rounded-full px-10 py-4 text-lg font-medium shadow-lg hover:bg-gray-100 transition-colors"
+                onclick="window.location.href='https://learn.turcar.net.cn'">
+                立即前往
+            </button>
+        </div>
+    </main>
+
+    <!-- ====================================================================== -->
+    <!-- ======================= 新增的学习路径部分开始 ======================= -->
+    <!-- ====================================================================== -->
+
+    <section id="learning-paths" class="relative bg-[#0c0c2c] py-20 md:py-28 z-0">
+        <div class="max-w-screen-xl mx-auto px-6">
+            <!-- 标题和描述 -->
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-bold text-white">探索我们的学习路径</h2>
+                <p class="mt-4 text-lg text-white/70 max-w-2xl mx-auto">
+                    我们为你精心设计了从入门到精通的专业学习路线图，助你系统地掌握知识，高效达成学习目标。
+                </p>
+            </div>
+
+            <!-- 学习路径卡片网格 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                <!-- 卡片 1: 前端开发 -->
+                <div
+                    class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden shadow-lg flex flex-col transition-all duration-300 hover:border-teal-400/50 hover:-translate-y-2">
+                    <img src="https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=2070&auto=format&fit=crop"
+                        alt="Web Development" class="w-full h-48 object-cover">
+                    <div class="p-6 flex flex-col flex-grow">
+                        <span
+                            class="inline-block bg-teal-500/20 text-teal-300 text-xs font-semibold px-3 py-1 rounded-full mb-4 self-start">热门</span>
+                        <h3 class="text-2xl font-bold text-white mb-2">前端开发专家路径</h3>
+                        <p class="text-white/70 text-base mb-6 flex-grow">
+                            从 HTML, CSS 和 JavaScript 基础开始，深入学习 React 和 Vue.js，最终成为一名全栈前端工程师。
+                        </p>
+                        <div class="space-y-3 mt-auto border-t border-white/10 pt-4">
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-teal-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 005.5 16c1.255 0 2.443-.29 3.5-.804V4.804zM14.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 0014.5 16c1.255 0 2.443-.29 3.5-.804v-10A7.968 7.968 0 0014.5 4z" />
+                                </svg>
+                                <span>包含 12 门课程</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-teal-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>预计 90 小时</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-teal-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M2 11h14a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2a1 1 0 011-1zM2 3h14a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                </svg>
+                                <span>难度: 中级</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <a href="#"
+                            class="block w-full text-center bg-teal-500 hover:bg-teal-600 text-white font-semibold py-3 rounded-lg transition-colors">开始学习</a>
+                    </div>
+                </div>
+
+                <!-- 卡片 2: 人工智能 -->
+                <div
+                    class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden shadow-lg flex flex-col transition-all duration-300 hover:border-cyan-400/50 hover:-translate-y-2">
+                    <img src="https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=2069&auto=format&fit=crop"
+                        alt="Artificial Intelligence" class="w-full h-48 object-cover">
+                    <div class="p-6 flex flex-col flex-grow">
+                        <span
+                            class="inline-block bg-cyan-500/20 text-cyan-300 text-xs font-semibold px-3 py-1 rounded-full mb-4 self-start">前沿</span>
+                        <h3 class="text-2xl font-bold text-white mb-2">人工智能与机器学习</h3>
+                        <p class="text-white/70 text-base mb-6 flex-grow">
+                            掌握 Python, TensorFlow 和 PyTorch，深入理解深度学习和自然语言处理，开启你的AI工程师生涯。
+                        </p>
+                        <div class="space-y-3 mt-auto border-t border-white/10 pt-4">
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-cyan-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 005.5 16c1.255 0 2.443-.29 3.5-.804V4.804zM14.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 0014.5 16c1.255 0 2.443-.29 3.5-.804v-10A7.968 7.968 0 0014.5 4z" />
+                                </svg>
+                                <span>包含 15 门课程</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-cyan-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>预计 150 小时</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-cyan-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M2 11h16a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2a1 1 0 011-1zM2 3h16a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                </svg>
+                                <span>难度: 高级</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <a href="#"
+                            class="block w-full text-center bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 rounded-lg transition-colors">开始学习</a>
+                    </div>
+                </div>
+
+                <!-- 卡片 3: UI/UX 设计 -->
+                <div
+                    class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden shadow-lg flex flex-col transition-all duration-300 hover:border-purple-400/50 hover:-translate-y-2">
+                    <img src="https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?q=80&w=2070&auto=format&fit=crop"
+                        alt="UI/UX Design" class="w-full h-48 object-cover">
+                    <div class="p-6 flex flex-col flex-grow">
+                        <span
+                            class="inline-block bg-purple-500/20 text-purple-300 text-xs font-semibold px-3 py-1 rounded-full mb-4 self-start">设计</span>
+                        <h3 class="text-2xl font-bold text-white mb-2">UI/UX 设计全流程</h3>
+                        <p class="text-white/70 text-base mb-6 flex-grow">
+                            学习用户研究、线框图、原型制作和可用性测试，使用 Figma 等现代工具创造出用户喜爱的产品。
+                        </p>
+                        <div class="space-y-3 mt-auto border-t border-white/10 pt-4">
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-purple-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 005.5 16c1.255 0 2.443-.29 3.5-.804V4.804zM14.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 0014.5 16c1.255 0 2.443-.29 3.5-.804v-10A7.968 7.968 0 0014.5 4z" />
+                                </svg>
+                                <span>包含 8 门课程</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-purple-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>预计 60 小时</span>
+                            </div>
+                            <div class="flex items-center text-white/80">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-purple-400"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M2 11h10a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1v-2a1 1 0 011-1zM2 3h10a1 1 0 011 1v2a1 1 0 01-1 1H2a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                </svg>
+                                <span>难度: 入门</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <a href="#"
+                            class="block w-full text-center bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 rounded-lg transition-colors">开始学习</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================== -->
+    <!-- ======================== 新增的学习路径部分结束 ======================== -->
+    <!-- ====================================================================== -->
+
+
+    <!-- 底部波浪 -->
+    <div class="absolute bottom-0 left-0 w-full h-24 md:h-32 z-10">
+        <svg viewBox="0 0 1440 120" preserveAspectRatio="none" class="w-full h-full">
+            <path d="M0,64 C240,128 480,32 720,64 C960,96 1200,0 1440,32 L1440,120 L0,120 Z" fill="#0c0c2c"></path>
+        </svg>
+    </div>
+
+    <!-- 页脚和备案号 -->
+    <footer class="absolute bottom-0 left-0 w-full p-4 z-20 text-center">
+        <div class="text-white/70 text-xs md:text-sm">
+            <span class="mb-1">© 2025 图克教育. All Rights Reserved.</span>
+            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                鲁ICP备2023025435号-3
+            </a>
+        </div>
+    </footer>
+
+</body>
+
+</html>
