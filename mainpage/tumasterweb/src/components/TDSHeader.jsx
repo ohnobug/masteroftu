@@ -93,18 +93,13 @@ const TDSHeader = () => {
               />
             </svg>
           </div>
-          <div
-            onClick={() => {
-              window.location.href = "https://learn.turcar.net.cn";
-            }}
-            style={{ cursor: "pointer" }}
-          >
+          <NavLink to="/login">
             <img
               src="https://img2.baidu.com/it/u=1137101923,166953968&fm=253&app=138&f=JPEG?w=500&h=500"
               alt="User profile"
               className="w-9 h-9 rounded-full"
             />
-          </div>
+          </NavLink>
         </div>
       </nav>
     </header>
