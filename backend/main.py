@@ -1,6 +1,10 @@
+import json
 import re
-from fastapi import FastAPI, Depends, HTTPException
+import aiohttp
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import asynccontextmanager
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, insert, update, exists
 from typing import List
@@ -8,7 +12,7 @@ from database import database, User, SMSLog
 import schemas
 import utils
 from SimpleCrypto import SimpleCrypto
-from moodle_api import api_get_user_by_username
+from moodle_api import api_create_users, api_get_users_by_username
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,8 +21,35 @@ async def lifespan(app: FastAPI):
     await database.disconnect()
 
 
+class UnicornException(Exception):
+    def __init__(self, message: str, code: int = 400):
+        self.code = code
+        self.message = message
+
+
 app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
 
+
+@app.exception_handler(UnicornException)
+async def unicorn_exception_handler(request: Request, exc: UnicornException):
+    return JSONResponse(
+        status_code=400,
+        content={"code": exc.code, "message": exc.message},
+    )
+
+origins = [
+    "https://turcar.net.cn",
+    "https://learn.turcar.net.cn",
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # # --- 1. 短信发送接口 ---
@@ -143,6 +174,34 @@ app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
 #     logs = await database.fetch_all(query)
 #     return logs
 
+
+@app.post("/api/register", response_model=schemas.BaseResponse, summary="用户注册")
+async def register(user_data: schemas.UserCreate):
+    """
+    用户注册
+    """
+    async with aiohttp.ClientSession() as session:
+        # 检测手机号是否已存在
+        userinfo = await api_get_users_by_username(session, [user_data.phone_number])
+        if userinfo:
+            raise UnicornException(code=400, message="手机号已被注册")
+        
+        # 注册新账号
+        result = await api_create_users(session, [{
+            'username': user_data.phone_number,
+            'password': user_data.password,
+            'firstname': "姓",
+            'lastname': "名",
+            'email': user_data.phone_number + "@turcar.net.cn",
+        }])
+
+    if result is None:
+        raise UnicornException(code=400, message=json.dumps(result))
+
+    return schemas.BaseResponse(
+        code=200,
+        message="注册成功"
+    )
 
 
 # 示例：获取当前登录用户信息

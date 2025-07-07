@@ -24,4 +24,4 @@ EXPOSE 8000
 
 # 8. 定义容器启动时运行的命令
 #    --host 0.0.0.0 让容器外的请求可以访问到应用
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8001"]

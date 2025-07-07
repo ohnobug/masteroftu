@@ -1,5 +1,8 @@
 import asyncio
 import aiohttp
+import json
+import ssl # 用于处理可能的SSL证书问题
+from multidict import CIMultiDict, MultiDict # aiohttp 使用 multidict
 
 # --- 1. 核心配置 (请根据您的 Moodle 环境修改) ---
 MOODLE_URL = 'https://learn.turcar.net.cn'       # 你的 Moodle 网址
@@ -7,121 +10,208 @@ TOKEN = 'e37b279206e60c6e48c3fc08437dc631'     # 你的 Web Service 令牌
 SERVICE_URL = f'{MOODLE_URL}/webservice/rest/server.php'
 
 
-async def call_moodle_api(function_name, **kwargs):
+# --- Moodle API 响应错误结构 ---
+def is_moodle_error(response_data):
+    """检查 Moodle API 的响应是否包含错误信息"""
+    return (isinstance(response_data, dict) and
+            ('exception' in response_data or 'error' in response_data))
+
+def encode_moodle_params(kwargs):
+    """
+    将 Python 的 kwargs（可能包含列表和字典）编码成 Moodle Web Services
+    所期望的 form-urlencoded 格式。
+    例如: {'users': [{'username': 'u1', 'email': 'e1'}]}
+    会编码成: {'users[0][username]': 'u1', 'users[0][email]': 'e1'}
+    """
+    encoded_params = {}
+    
+    def flatten_dict(d, prefix=""):
+        if isinstance(d, dict):
+            for k, v in d.items():
+                new_prefix = f"{prefix}[{k}]" if prefix else k
+                flatten_dict(v, new_prefix)
+        elif isinstance(d, list):
+            for i, item in enumerate(d):
+                new_prefix = f"{prefix}[{i}]" if prefix else str(i)
+                flatten_dict(item, new_prefix)
+        else:
+            encoded_params[prefix] = str(d) # 确保所有值都转为字符串
+
+    for key, value in kwargs.items():
+        flatten_dict(value, key)
+        
+    return encoded_params
+
+
+async def call_moodle_api(session: aiohttp.ClientSession, function_name: str, **kwargs):
     """
     一个通用的、异步的 Moodle API 调用函数。
-
-    :param session: aiohttp.ClientSession 对象，用于管理连接。
-    :param function_name: 要调用的 Moodle Web Service 函数名。
-    :param kwargs: 函数所需的参数，以关键字参数形式传入。
-    :return: 解码后的 Moodle API 响应 (通常是字典或列表)，如果出错则返回 None。
     """
-    print(f"--- 正在调用 API: {function_name} ---")
-
     # 构建请求参数
-    params = {
+    base_params = {
         'wstoken': TOKEN,
         'wsfunction': function_name,
         'moodlewsrestformat': 'json'
     }
 
-    # Moodle API 对列表和字典有特殊的编码要求 (如 list[0], list[1]...)
-    # 这部分处理逻辑与同步版本相同
-    processed_kwargs = {}
-    for key, value in kwargs.items():
-        if isinstance(value, list):
-            for i, item in enumerate(value):
-                if isinstance(item, dict):
-                    for sub_key, sub_value in item.items():
-                        processed_kwargs[f'{key}[{i}][{sub_key}]'] = sub_value
-                else:
-                    processed_kwargs[f'{key}[{i}]'] = item
-        else:
-            processed_kwargs[key] = value
-            
-    params.update(processed_kwargs)
+    # 使用 encode_moodle_params 来处理嵌套的 kwargs
+    encoded_kwargs = encode_moodle_params(kwargs)
+    
+    # 合并 base_params 和编码后的 kwargs
+    final_params = base_params.copy()
+    final_params.update(encoded_kwargs)
 
+    # aiohttp 的 data 参数可以直接接受一个字典，它会自动进行 form-urlencoded 编码
+    # 如果需要处理 Cookies 或其他高级选项，可以使用 ClientSession.post 的其他参数
+    
     try:
-        async with aiohttp.ClientSession() as session:
-            # 使用传入的 session 发送异步 POST 请求
-            async with session.post(SERVICE_URL, data=params) as response:
-                response.raise_for_status()  # 如果HTTP状态码是 4xx/5xx, 抛出 ClientResponseError
+        # 使用 session.post 发送 form-encoded data
+        async with session.post(SERVICE_URL, data=final_params) as response:
+            response.raise_for_status()
 
-                # 异步地读取和解析 JSON 响应
-                # aiohttp 可能会抛出 aiohttp.ContentTypeError 而不是 ValueError
-                result = await response.json(content_type=None) 
+            try:
+                result = await response.json(content_type=None)
+            except aiohttp.ContentTypeError:
+                print(f"Moodle API 返回了非 JSON 格式的响应 (Content-Type: {response.content_type})。")
+                raw_text = await response.text()
+                print(f"原始响应:\n{raw_text}")
+                return None
+            except json.JSONDecodeError:
+                print("Moodle API 响应无法解码为 JSON。")
+                raw_text = await response.text()
+                print(f"原始响应:\n{raw_text}")
+                return None
 
-                # 检查 Moodle 返回的特定错误
-                if isinstance(result, dict) and 'exception' in result:
+            if is_moodle_error(result):
+                error_details = result.get('error', {})
+                if 'message' in error_details:
+                    print("Moodle API 返回错误:")
+                    print(f"  消息: {error_details.get('message')}")
+                    if 'debuginfo' in error_details:
+                        print(f"  详细信息: {error_details.get('debuginfo')}")
+                else: # 兼容旧版本 Moodle 的错误格式
                     print("Moodle API 返回错误:")
                     print(f"  异常: {result.get('exception')}")
                     print(f"  错误码: {result.get('errorcode')}")
                     print(f"  消息: {result.get('message')}")
-                    return None
-                return result
-    except aiohttp.ClientError as e:
-        print(f"网络或协议错误: {e}")
+                return None
+            
+            return result
+
+    except aiohttp.ClientConnectorError as e:
+        print(f"连接到 Moodle 时发生错误: {e}")
+        return None
+    except aiohttp.ClientResponseError as e:
+        print(f"HTTP 响应错误: 状态 {e.status}, 原因 {e.message}")
+        print(f"URL: {e.request_info.url}")
+        try:
+            # 尝试获取响应文本，但注意此时response可能不是一个有效的对象
+            # 更健壮的做法是在捕获到 ClientResponseError 时，先获取响应对象再尝试读取
+            # here, we might not have access to the response object directly
+            print("无法获取详细错误响应文本。")
+        except Exception:
+            pass 
         return None
     except asyncio.TimeoutError:
-        print("请求超时。")
+        print("请求 Moodle API 超时。")
         return None
     except Exception as e:
-        # 捕获可能的 JSON 解析错误或其他未知错误
-        print(f"发生未知错误: {e}")
-        # 尝试打印原始文本以供调试
-        try:
-            print("原始响应文本:", await response.text())
-        except:
-            pass
+        print(f"调用 Moodle API 时发生未知错误: {e}")
         return None
 
 
-async def api_get_user_by_username(username):
-    """
-    步骤：通过用户名异步获取 Moodle 用户信息。
+# --- 以下函数保持不变，只是确保它们调用了修改后的 call_moodle_api ---
 
-    :param session: aiohttp.ClientSession 对象。
-    :param username: 要查询的用户的用户名。
-    :return: 包含用户信息的字典，如果找不到或失败则返回 None。
+async def api_get_users_by_username(session: aiohttp.ClientSession, usernames: list):
     """
-    print(f"\n--- 目标操作: 正在通过用户名 '{username}' 获取账号信息 ---\n")
-    
+    异步通过用户名列表获取 Moodle 用户信息。
+    """
+    if not usernames:
+        print("未提供要查询的用户名列表。")
+        return []
+
+    print(f"\n--- 目标操作: 正在通过用户名列表 {usernames} 获取账号信息 ---\n")
+
     users_data = await call_moodle_api(
+        session,
         'core_user_get_users_by_field',
         field='username',
-        values=[username]
+        values=usernames
     )
 
-    if not users_data:
-        print(f"!!! 错误: 获取用户信息失败或找不到用户 '{username}'。\n")
+    if users_data is None:
+        print(f"!!! 错误: 在查询用户名列表 {usernames} 时发生未知错误。\n")
         return None
 
-    user_info = users_data[0]
-    print(f"✅ 成功获取到用户 '{username}' 的信息，用户ID为: {user_info['id']}\n")
-    return user_info
+    if not users_data:
+        print(f"未找到任何用户名在 {usernames} 中的用户。\n")
+        return []
 
+    print(f"✅ 成功获取到 {len(users_data)} 个用户的部分信息。")
+    for user_info in users_data:
+        print(f"  找到用户: '{user_info.get('username')}' (ID: {user_info.get('id')})")
+    print("")
+    return users_data
 
+async def api_create_users(session: aiohttp.ClientSession, users_to_create: list):
+    """
+    异步批量创建 Moodle 用户。
+    """
+    if not users_to_create:
+        return []
 
-# async def main():
-#     """主执行协程函数"""
+    # 将 users_to_create 列表直接作为 'users' 参数的值传递
+    # call_moodle_api 中的 encode_moodle_params 会处理好嵌套结构
+    creation_results = await call_moodle_api(
+        session,
+        'core_user_create_users',
+        users=users_to_create
+    )
 
-#     async with aiohttp.ClientSession() as session:
-#         # --- 任务: 通过用户名获取账号信息 (单个、顺序执行) ---
-#         target_username = 'lijunjie'
+    if creation_results is None:
+        print(creation_results)
+        print("!!! 错误: 在批量创建用户时发生未知错误。\n")
+        return None
+
+    successful_creations = 0
+    failed_creations = 0
+    if isinstance(creation_results, list):
+        for user_info in creation_results:
+            if 'id' in user_info and 'username' in user_info:
+                print(f"  ✅ 成功创建: 用户名 '{user_info['username']}' (ID: {user_info['id']})")
+                successful_creations += 1
+            else:
+                # 即使在列表中，也可能存在错误条目
+                print(f"  ❌ 创建失败或响应格式异常: {user_info}")
+                failed_creations += 1
+    else:
+        print(f"  ❌ 批量创建返回了非预期的格式: {creation_results}")
+        failed_creations = len(users_to_create)
+
+    return creation_results
+
+# --- 主执行函数 ---
+async def main():
+    async with aiohttp.ClientSession() as session:
+        print("\n--- 开始执行示例 2: 批量创建用户 ---")
+        users_to_create_data = [
+            {
+                "username": "asyncuser001",
+                "password": "ComplexPassword123!",
+                "firstname": "Async",
+                "lastname": "UserOne",
+                "email": "asyncuser001@example.com",
+                "auth": "manual", # 手动认证
+                "idnumber": "ASYNC-001",
+                "city": "Nanjing",
+                "country": "CN",
+                "lang": "zh_cn",
+                "timezone": "Asia/Shanghai",
+                "mailformat": 1 # 1 for HTML
+            }
+        ]
         
-#         user_details = await api_get_user_by_username(session, target_username)
+        await api_create_users(session, users_to_create_data)
 
-
-#         if user_details:
-#             print("===== 用户详细信息 =====")
-#             print(user_details)
-#             # print(f"  ID: {user_details.get('id')}")
-#             # print(f"  姓名: {user_details.get('fullname')}")
-#             # print(f"  邮箱: {user_details.get('email')}")
-#             print("========================\n")
-#         else:
-#             print(f"未能获取到用户 '{target_username}' 的信息。")
-
-
-# if __name__ == '__main__':
-#     asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

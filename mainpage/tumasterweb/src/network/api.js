@@ -6,8 +6,8 @@ export const APIUserInfo = async (data) => {
     return response.data;
 }
 
-export const APILogin = (data) => getData("/v1/login", data);
+export const APILogin = (data) => getData("/api/login", data);
 
-export const APIRegister = (data) => getData("/v1/register", data);
+export const APIRegister = (data) => getData("/api/register", data);
 
-export const APIForgotPassword = (data) => getData("/v1/forgotpassword", data);
+export const APIForgotPassword = (data) => getData("/api/forgotpassword", data);

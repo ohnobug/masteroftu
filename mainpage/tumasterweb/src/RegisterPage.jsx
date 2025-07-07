@@ -5,15 +5,17 @@ import axios from "axios";
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
+import { APIRegister } from "./network/api";
+import { useNavigate } from "react-router";
 
 function RegisterPage() {
   // --- State 管理 ---
   // 表单输入
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // 新增：确认密码状态
-  
+  const [phoneNumber, setPhoneNumber] = useState("18825130912");
+  const [verificationCode, setVerificationCode] = useState("123456");
+  const [password, setPassword] = useState("Turcarai2025@");
+  const [confirmPassword, setConfirmPassword] = useState("Turcarai2025@"); // 新增：确认密码状态
+
   // 错误信息
   const [error, setError] = useState(null);
 
@@ -24,6 +26,8 @@ function RegisterPage() {
   // 倒计时状态
   const [countdown, setCountdown] = useState(0);
   const timerRef = useRef(null);
+
+  const navigate = useNavigate();
 
   // 组件卸载时清除定时器，防止内存泄漏
   useEffect(() => {
@@ -51,7 +55,7 @@ function RegisterPage() {
       // 通常注册和忘记密码可以使用同一个发送验证码的接口
       await axios.post("/api/v1/send-verification-code", {
         phoneNumber: phoneNumber,
-        type: 'register' // 可以选择性地传递一个类型，方便后端区分业务场景
+        type: "register", // 可以选择性地传递一个类型，方便后端区分业务场景
       });
 
       // 成功后开始倒计时
@@ -87,25 +91,24 @@ function RegisterPage() {
       setError("两次输入的密码不一致。");
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
       // --- API 请求: 提交注册信息 ---
-      // 请将 '/api/v1/register' 替换成你真实的注册API接口
-      const response = await axios.post("/api/v1/register", {
-        phoneNumber: phoneNumber,
-        code: verificationCode,
+      const response = await APIRegister({
+        phone_number: phoneNumber,
+        verification_code: verificationCode,
         password: password,
       });
 
-      console.log("注册成功:", response.data);
+      console.log("注册成功:", response);
       setIsLoading(false);
 
-      // 注册成功后的操作，例如提示用户并跳转到登录页
-      alert("注册成功！即将跳转到登录页面。");
-      window.location.href = "/login"; // 跳转到登录页
-
+      if (response.code == 200) {
+        alert("注册成功！即将跳转到登录页面。");
+        navigate("/login")
+      }
     } catch (err) {
       setIsLoading(false);
       console.error("注册失败:", err);

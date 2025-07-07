@@ -6,11 +6,12 @@ const request = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    responseType: "json",
 });
 
-export const getData = (url) => {
+export const getData = (url, data) => {
     return new Promise((resolve, reject) => {
-        request.post(url)
+        request.post(url, data)
             .then((response) => {
                 resolve(response.data);
             }).catch((error) => {

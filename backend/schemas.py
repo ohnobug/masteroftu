@@ -2,6 +2,11 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
+
+class BaseResponse(BaseModel):
+    code: int = Field(..., example=200)
+    message: str = Field(..., example="Success")
+
 # --- User Schemas ---
 class UserBase(BaseModel):
     phone_number: str = Field(..., example="13800138000")

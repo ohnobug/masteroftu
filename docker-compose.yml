@@ -55,6 +55,18 @@ services:
     networks:
       - moodle_network
 
+  newmoodle:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    depends_on:
+      - moodle
+    networks:
+      - moodle_network
+
 networks:
   moodle_network:
     driver: bridge
