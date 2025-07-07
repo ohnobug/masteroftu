@@ -28,10 +28,11 @@ services:
       - MOODLE_DATABASE_USER=bn_moodle
       - MOODLE_DATABASE_PASSWORD=Turcarai2025
       - MOODLE_DATABASE_NAME=bitnami_moodle
-      - PHP_DEFAULT_MEMORY_LIMIT=2048M
+      - PHP_DEFAULT_MEMORY_LIMIT=4096M
       # ALLOW_EMPTY_PASSWORD is recommended only for development.
       # - ALLOW_EMPTY_PASSWORD=yes
     volumes:
+      - './php.ini:/opt/bitnami/php/etc/php.ini'
       - './moodle:/bitnami/moodle'
       # - 'moodle_data:/bitnami/moodle'
       - 'moodledata_data:/bitnami/moodledata'
