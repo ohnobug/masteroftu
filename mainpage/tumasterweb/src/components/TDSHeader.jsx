@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import { NavLink, useLocation } from "react-router-dom";
 
 const TDSHeader = () => {
@@ -22,6 +23,14 @@ const TDSHeader = () => {
   const active = useRef(
     ["text-black", "font-semibold", "transition-colors"].join(" ")
   );
+
+  const userinfo = useSelector((state) => {
+    return state.user.userinfo;
+  });
+
+  useEffect(() => {
+    // console.log("User Info Updated:", userinfo);
+  }, [userinfo]);
 
   return (
     <header className="sticky top-0 left-0 right-0 p-6 z-40 bg-white/50 backdrop-blur-lg shadow-sm">
@@ -93,13 +102,43 @@ const TDSHeader = () => {
               />
             </svg>
           </div>
-          <NavLink to="/login">
-            <img
-              src="https://img2.baidu.com/it/u=1137101923,166953968&fm=253&app=138&f=JPEG?w=500&h=500"
-              alt="User profile"
-              className="w-9 h-9 rounded-full"
-            />
-          </NavLink>
+
+          {userinfo ? (
+            <NavLink
+              to="https://learn.turcar.net.cn/my/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <img
+                src={
+                  "https://learn.turcar.net.cn/pluginfile.php/" +
+                  userinfo.preference.filepicker_recentrepository +
+                  "/user/icon"
+                }
+                alt="User profile"
+                className="w-9 h-9 rounded-full"
+              />
+              <span>{userinfo?.username}</span>
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/login"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <img
+                src="https://img2.baidu.com/it/u=1137101923,166953968&fm=253&app=138&f=JPEG?w=500&h=500"
+                alt="User profile"
+                className="w-9 h-9 rounded-full"
+              />
+            </NavLink>
+          )}
         </div>
       </nav>
     </header>

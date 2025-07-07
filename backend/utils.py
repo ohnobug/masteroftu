@@ -1,5 +1,6 @@
 import random
 from datetime import datetime, timedelta, timezone
+import aiohttp
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, Depends, status
@@ -120,3 +121,12 @@ async def verify_sms_code(phone_number: str, code: str, purpose: str):
     update_query = update(VerificationCode).where(VerificationCode.id == record.id).values(is_used=True)
     await database.execute(update_query)
     return True
+
+
+# 得到登录用户名
+async def get_login_username(cookie: str = None):
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://learn.turcar.net.cn/getusername.php?cookie=' + cookie) as response:            
+            html = await response.text()
+            return html
+

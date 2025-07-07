@@ -14,12 +14,6 @@ class UserLogin(BaseModel):
     phone_number: str
     password: str
 
-class UserOut(UserBase):
-    id: int
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
 
 class Token(BaseModel):
     access_token: str
@@ -45,3 +39,10 @@ class ResetPasswordRequest(BaseModel):
     phone_number: str
     verification_code: str
     new_password: str = Field(..., min_length=6)
+    
+
+class UserInfoRequestOut(BaseModel):
+    username: str = Field(..., example="")
+
+class UserInfoRequestIn(BaseModel):
+    username: str = Field(..., example="")

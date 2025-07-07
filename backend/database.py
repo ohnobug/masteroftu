@@ -17,6 +17,9 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+
+
+
 class VerificationCode(Base):
     __tablename__ = "verification_codes"
     id = Column(Integer, primary_key=True, index=True)
@@ -25,7 +28,9 @@ class VerificationCode(Base):
     purpose = Column(String(50), nullable=False)
     is_used = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
-    expires_at = Column(TIMESTAMP, nullable=False)
+
+
+
 
 class SMSLog(Base):
     __tablename__ = "sms_logs"
@@ -34,3 +39,7 @@ class SMSLog(Base):
     content = Column(Text, nullable=False)
     status = Column(String(20), nullable=False)
     sent_at = Column(TIMESTAMP, server_default=func.now())
+
+
+
+
