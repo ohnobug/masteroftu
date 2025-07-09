@@ -9,6 +9,7 @@ import AboutPage from "./AboutPage.jsx";
 import LoginPage from "./LoginPage.jsx";
 import ForgotPasswordPage from "./ForgotPasswordPage.jsx";
 import RegisterPage from "./RegisterPage.jsx";
+import ChatPage from "./ChatPage.jsx";
 import { store } from "./store/index.js";
 import { Provider } from "react-redux";
 
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path: "/about",
         element: <AboutPage />,
+      },
+      {
+        path: "/chat",
+        element: <ChatPage />,
       },
     ],
   },

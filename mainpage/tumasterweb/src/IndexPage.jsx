@@ -1,8 +1,11 @@
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
+import { useNavigate } from "react-router";
 
 function IndexPage() {
+  const navigate = useNavigate();
+
   return (
     <>
       {/* 背景图片和渐变叠加层 */}
@@ -12,7 +15,10 @@ function IndexPage() {
       <TDSHeader />
 
       {/* 主要内容 */}
-      <main className="relative flex flex-col items-center justify-center px-4 z-10 pb-20" style={{ minHeight: "calc(100vh - 216px)" }}>
+      <main
+        className="relative flex flex-col items-center justify-center px-4 z-10 pb-20"
+        style={{ minHeight: "calc(100vh - 216px)" }}
+      >
         <div className="flex flex-col items-center gap-6 text-center w-full">
           <h1 className="text-black text-6xl md:text-7xl font-bold">
             Learn About
@@ -26,7 +32,12 @@ function IndexPage() {
               className="blinking-cursor w-full bg-white rounded-full py-4 pl-8 pr-16 text-lg text-black placeholder-gray shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all duration-300"
             />
             {/* 发送图标 */}
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 text-gray-400 hover:text-black transition-colors">
+            <button
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 text-gray-400 hover:text-black transition-colors"
+              onClick={() => {
+                navigate("/chat");
+              }}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"

@@ -53,6 +53,15 @@ const TDSHeader = () => {
             </NavLink>
 
             <NavLink
+              to="/chat"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
+              }
+            >
+              对话
+            </NavLink>
+
+            <NavLink
               to="/course"
               className={({ isActive, isPending }) =>
                 isActive ? active.current : inactive.current

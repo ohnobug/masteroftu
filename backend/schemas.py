@@ -51,3 +51,6 @@ class UserInfoRequestOut(BaseModel):
 
 class UserInfoRequestIn(BaseModel):
     username: str = Field(..., example="")
+
+class UserLoginPrivatetoken(BaseModel):
+    privatetoken: str = Field(..., example="")

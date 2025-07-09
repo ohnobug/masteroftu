@@ -12,7 +12,7 @@ from database import database, User, SMSLog
 import schemas
 import utils
 from SimpleCrypto import SimpleCrypto
-from moodle_api import api_create_users, api_get_users_by_username
+from moodle_api import api_create_users, api_get_autologin_key, api_get_users_by_username
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -202,6 +202,24 @@ async def register(user_data: schemas.UserCreate):
         code=200,
         message="注册成功"
     )
+
+
+@app.post("/api/login", response_model=schemas.UserInfoRequestOut)
+async def login(request: schemas.UserLoginPrivatetoken):
+    async with aiohttp.ClientSession() as session:
+        # 使用私有令牌获取自动登录密钥
+        if not request.privatetoken:
+            raise UnicornException(code=400, message="私有令牌不能为空")
+        
+        print(f"使用私有令牌: {request.privatetoken}")
+        
+        # 获取自动登录密钥
+        result = await api_get_autologin_key(session=session, privatetoken=request.privatetoken)
+        print(result)
+    
+    return {
+        "username": ""
+    }
 
 
 # 示例：获取当前登录用户信息
