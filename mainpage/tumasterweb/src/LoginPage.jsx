@@ -2,8 +2,10 @@ import { useState } from "react";
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
-import { APILogin } from "./network/api";
+import { APILogin, APIUserInfo } from "./network/api";
 import { useNavigate } from "react-router";
+import { setUserinfo } from "./store/userSlice";
+import { useDispatch } from "react-redux";
 
 function LoginPage() {
   // 使用 state 来管理表单输入、错误信息和加载状态
@@ -13,6 +15,15 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const fetchUserInfo = async () => {
+    const data = await APIUserInfo();
+
+    if (data.data) {
+      dispatch(setUserinfo(data.data));
+    }
+  };
 
   // 表单提交处理函数
   const handleSubmit = async (event) => {
@@ -32,6 +43,9 @@ function LoginPage() {
     }
 
     localStorage.setItem("token", data.data.token);
+
+    await fetchUserInfo();
+
     navigate("/chat");
   };
 

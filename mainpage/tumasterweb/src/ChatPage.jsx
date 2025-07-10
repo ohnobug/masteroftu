@@ -7,20 +7,25 @@ import {
   APIChatNewSession,
   APIChatNewMessage,
   APIChatDelMessage,
+  APIUserInfo,
 } from "./network/api";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setChatSessions,
   setCurrentChatId,
   setChatMessage,
+  setTokenToMessage,
 } from "./store/chatSlice";
-import socket from "./network/ws";
+
+import { setUserinfo } from "./store/userSlice";
 import markdownit from "markdown-it";
 import MarkdownItHightlightJS from "markdown-it-highlightjs";
 import "highlight.js/styles/github-dark.css";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import io from "socket.io-client";
 
 function ChatPage() {
+  const navigate = useNavigate();
   const chatSessions = useSelector((state) => state.chat.chatSessions);
   const currentChatId = useSelector((state) => state.chat.currentChatId);
   const dispatch = useDispatch();
@@ -29,6 +34,7 @@ function ChatPage() {
   const [inputStr, setInputStr] = useState(""); // 大界面输入框
   const md = useRef(null); // markdownit实例
   const chataeraRef = useRef(null); // 对话记录界面
+  const socket = useRef(null); // socket实例
 
   const newChatSession = async (input, chatId) => {
     if (input.trim()) {
@@ -45,7 +51,7 @@ function ChatPage() {
       // 获取最新消息列表
       await fetchChatHistory(chatId);
 
-      socket.emit("get_text", {
+      socket.current.emit("get_text", {
         ai_message_id: data.data.ai_message_id,
         chat_session_id: chatId,
       });
@@ -161,7 +167,7 @@ function ChatPage() {
     await fetchChatHistory(data1.data.chat_session_id);
 
     // 让AI生成回答
-    socket.emit("get_text", {
+    socket.current.emit("get_text", {
       ai_message_id: data2.data.ai_message_id,
       chat_session_id: data1.data.chat_session_id,
     });
@@ -169,24 +175,65 @@ function ChatPage() {
     setInput("");
   };
 
+  // 连接websocket
+  const connectWs = () => {
+    socket.current = io(import.meta.env.VITE_WS_BASE_URL, {
+      reconnectionDelayMax: 10000,
+      extraHeaders: {
+        authorization: `bearer ` + localStorage.getItem("token"),
+      },
+    });
+
+    socket.current.on("connect", () => {
+      console.log("链接成功");
+    });
+
+    socket.current.on("disconnect", () => {
+      console.log("链接断开");
+    });
+
+    socket.current.on("token_output", (data) => {
+      const jdata = JSON.parse(data);
+      dispatch(
+        setTokenToMessage({
+          chat_session_id: jdata.chat_session_id,
+          ai_message_id: jdata.ai_message_id,
+          token: jdata.token,
+        })
+      );
+    });
+  };
+
+  const fetchUserInfo = async () => {
+    const data = await APIUserInfo().catch((error) => {
+      navigate("/login");
+    });
+
+    dispatch(setUserinfo(data.data));
+  };
+
   useEffect(() => {
-    fetchSession();
+    fetchUserInfo().then(() => {
+      fetchSession();
 
-    md.current = markdownit({
-      html: true,
-      linkify: true,
-      typographer: true,
-    }).use(MarkdownItHightlightJS);
+      connectWs();
 
-    md.current.renderer.rules.table_open = () =>
-      '<table style="border-collapse: collapse; width: 100%;">';
-    md.current.renderer.rules.table_close = () => "</table>";
+      md.current = markdownit({
+        html: true,
+        linkify: true,
+        typographer: true,
+      }).use(MarkdownItHightlightJS);
 
-    // 修改表头单元格样式
-    md.current.renderer.rules.th_open = () =>
-      '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
-    md.current.renderer.rules.td_open = () =>
-      '<td style="border: 1px solid #ddd; padding: 8px;">';
+      md.current.renderer.rules.table_open = () =>
+        '<table style="border-collapse: collapse; width: 100%;">';
+      md.current.renderer.rules.table_close = () => "</table>";
+
+      // 修改表头单元格样式
+      md.current.renderer.rules.th_open = () =>
+        '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
+      md.current.renderer.rules.td_open = () =>
+        '<td style="border: 1px solid #ddd; padding: 8px;">';
+    });
   }, []);
 
   useEffect(() => {
@@ -373,7 +420,9 @@ function ChatPage() {
                               : "bg-gray-200 text-black rounded-bl-none"
                           }`}
                           dangerouslySetInnerHTML={{
-                            __html: md.current.render(message.text),
+                            __html: message.text
+                              ? md.current.render(message.text)
+                              : "",
                           }}
                         ></div>
                       </div>

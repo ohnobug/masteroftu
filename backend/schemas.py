@@ -56,11 +56,14 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=6)
     
 
-class UserInfoRequestOut(BaseModel):
-    username: str = Field(..., example="")
+class UserInfo(BaseModel):
+    phone_number: str = Field(...)
+
+class UserInfoRequestOut(BaseResponse):
+    data: UserInfo = Field(...)
 
 class UserInfoRequestIn(BaseModel):
-    username: str = Field(..., example="")
+    pass
 
 class UserLoginRequestIn(BaseModel):
     phone_number: str = Field(..., example="")

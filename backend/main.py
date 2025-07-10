@@ -1,6 +1,6 @@
 import json
 import aiohttp
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import JSONResponse
@@ -47,6 +47,44 @@ async def unicorn_exception_handler(request: Request, exc: UnicornException):
         content={"code": exc.code, "message": exc.message},
     )
 
+
+
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    """
+    自定义 HTTPException 处理器。
+     khusus 针对 401 Unauthorized 错误返回统一的 JSON 格式响应。
+    """
+    print(f"Caught HTTPException with status code: {exc.status_code} and detail: {exc.detail}") # Optional debug print
+
+    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+        # 这会捕获：
+        # 1. oauth2_scheme 因为缺少 Header 抛出的默认 401
+        # 2. get_current_user 因为令牌无效等原因抛出的 401
+        # 您可以根据需要进一步检查 exc.detail 来区分不同的 401 原因，
+        # 但通常提供一个通用的“认证失败”消息就足够了，以免泄露过多信息。
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={
+                "code": 401,
+                "message": "用户尚未登录", # 更友好的消息
+            }
+        )
+    else:
+        # 对于其他 HTTPException 状态码 (如 400, 404, 422, 500)，
+        # 可以选择：
+        # A) 重新抛出异常，让 FastAPI 的默认 HTTPException 处理器处理
+        # raise exc
+        # B) 返回一个基于原始异常信息的 JSON 响应 (如下所示)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                 "code": exc.status_code,
+                 "message": exc.detail
+            }
+        )
+
+
 origins = [
     "https://turcar.net.cn",
     "https://learn.turcar.net.cn",
@@ -64,6 +102,7 @@ app.add_middleware(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     # 在这里验证 form_data.username 和 form_data.password
@@ -80,7 +119,7 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
     query_stmt = select(TurUsers).where(TurUsers.phone_number == request.phone_number)
     result = await db.execute(query_stmt)
     userinfo = result.scalar_one_or_none()
-    
+
     if userinfo is None:
         raise HTTPException(status_code=400, detail="该账号尚未注册")
 
@@ -95,8 +134,6 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
         )
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-
-
 
 @app.post("/api/register", response_model=schemas.UserRegisterRequestOut, summary="用户注册")
 async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = Depends(database.get_db)):
@@ -149,20 +186,23 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
     # )
 
 
-@app.post("/api/user", response_model=schemas.UserInfoRequestOut)
-async def read_users_me(request: schemas.UserInfoRequestIn):
-    decryptStr = SimpleCrypto.decrypt(request.username)
-    decryptStr = decryptStr.replace("\b", "")
-    decryptStr = decryptStr.replace("\u000b", "")
+@app.post("/api/userinfo", response_model=schemas.UserInfoRequestOut)
+async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+    try:
+        userinfo = get_userInfo_from_token(token)
+    except:
+        HTTPException(status_code=401, detail="Token is invalid")
     
-    # print(await api_get_user_by_username(decryptStr))
     
-    return {
-        "username": decryptStr
-    }
-
-
-
+    print(userinfo)
+    
+    return schemas.UserInfoRequestOut(
+        code=200,
+        message="success",
+        data=schemas.UserInfo(
+            phone_number=userinfo['phone_number']
+        )
+    )
 
 
 

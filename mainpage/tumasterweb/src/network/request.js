@@ -1,6 +1,7 @@
 import axios from "axios";
+import { Navigate } from "react-router";
 
-let token = localStorage.getItem("token");
+
 
 const request = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
@@ -11,13 +12,16 @@ const request = axios.create({
     responseType: "json",
 });
 
-if (token) {
-    request.headers['Authorization'] = "bearer " + token
-}
 
 export const getData = (url, data) => {
+    let token = localStorage.getItem("token");
+
     return new Promise((resolve, reject) => {
-        request.post(url, data)
+        request.post(url, data, {
+            headers: {
+                "Authorization": token ? "bearer " + token : null
+            }
+        })
             .then((response) => {
                 resolve(response.data);
             }).catch((error) => {

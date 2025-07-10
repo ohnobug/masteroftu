@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from openai import AsyncOpenAI
 from enum import Enum
 import database
+from utils import get_userInfo_from_token
 
 class RoleEnum(str, Enum):
     user = "user"
@@ -72,17 +73,12 @@ async def handle_startup():
 
 usermap = dict()
 
-def decodeBearer(bearer):
-    return {
-        'id': 2,
-        'username': 'admin',
-    }
 
 @sio.event
 async def connect(sid, environ):
     try:
         bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
-        userinfo = decodeBearer(bearer)
+        userinfo = get_userInfo_from_token(bearer)
         usermap[sid] = userinfo
     except socketio.exceptions.ConnectionRefusedError as e:
         # 捕获 ConnectionRefusedError 并重新抛出

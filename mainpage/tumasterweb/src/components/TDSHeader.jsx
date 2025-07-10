@@ -1,15 +1,21 @@
 import { useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { NavLink, useLocation } from "react-router-dom";
+import { setUserinfo } from "../store/userSlice";
 
 const TDSHeader = () => {
   const location = useLocation();
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    console.log(location);
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
   }, [location]);
+
+  const logout = () => {
+    dispatch(setUserinfo(null));
+    localStorage.removeItem("token");
+  };
 
   const inactive = useRef(
     [
@@ -28,16 +34,12 @@ const TDSHeader = () => {
     return state.user.userinfo;
   });
 
-  useEffect(() => {
-    // console.log("User Info Updated:", userinfo);
-  }, [userinfo]);
-
   return (
     <header className="sticky top-0 left-0 right-0 p-6 z-40 bg-white/50 backdrop-blur-lg shadow-sm">
       <nav className="flex justify-between items-center max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <div className="flex items-center gap-3">
-            <span className="text-black text-lg font-medium">图克教育</span>
+            <span className="text-black text-lg font-medium">智能客服</span>
             <span className="text-black/70 text-xs font-medium border border-black/30 rounded-full px-3 py-1">
               实验性
             </span>
@@ -92,7 +94,7 @@ const TDSHeader = () => {
         <div className="flex items-center gap-4">
           <div
             onClick={() => {
-              window.location.href = "https://learn.turcar.net.cn";
+              // window.location.href = "https://learn.turcar.net.cn";
             }}
             style={{ cursor: "pointer" }}
           >
@@ -113,8 +115,8 @@ const TDSHeader = () => {
           </div>
 
           {userinfo ? (
-            <NavLink
-              to="https://learn.turcar.net.cn/my/"
+            <div
+              // to="/login"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -123,15 +125,16 @@ const TDSHeader = () => {
             >
               <img
                 src={
-                  "https://learn.turcar.net.cn/pluginfile.php/" +
-                  userinfo.preference.filepicker_recentrepository +
-                  "/user/icon"
+                  "https://img2.baidu.com/it/u=3149121010,3733367959&fm=253&app=138&f=JPEG?w=500&h=500"
                 }
                 alt="User profile"
                 className="w-9 h-9 rounded-full"
               />
-              <span>{userinfo?.username}</span>
-            </NavLink>
+              <span>{userinfo?.phone_number}</span>
+              <span className="cursor-pointer" onClick={() => logout()}>
+                退出
+              </span>
+            </div>
           ) : (
             <NavLink
               to="/login"
