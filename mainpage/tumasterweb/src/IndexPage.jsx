@@ -2,9 +2,12 @@ import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
 import { useNavigate } from "react-router";
+import { useState } from "react";
 
 function IndexPage() {
   const navigate = useNavigate();
+
+  const [input, setInput] = useState("");
 
   return (
     <>
@@ -28,6 +31,19 @@ function IndexPage() {
           <div className="relative w-full max-w-xl mt-2">
             <input
               type="text"
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key == "Enter") {
+                  navigate("/chat", {
+                    state: { input: input.trim() },
+                  }).then(() => {
+                    setInput("");
+                  });
+                }
+              }}
               placeholder="请输入你的问题"
               className="blinking-cursor w-full bg-white rounded-full py-4 pl-8 pr-16 text-lg text-black placeholder-gray shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition-all duration-300"
             />
@@ -35,7 +51,11 @@ function IndexPage() {
             <button
               className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 text-gray-400 hover:text-black transition-colors"
               onClick={() => {
-                navigate("/chat");
+                navigate("/chat", {
+                  state: { input: input.trim() },
+                }).then(() => {
+                  setInput("");
+                });
               }}
             >
               <svg

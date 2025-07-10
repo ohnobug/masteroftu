@@ -32,7 +32,7 @@ async def get_db():
 metadata = MetaData()
 Base = declarative_base(metadata=metadata)
 
-class TurUser(Base):
+class TurUsers(Base):
     __tablename__ = "tur_users"
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), unique=True, index=True, nullable=False)

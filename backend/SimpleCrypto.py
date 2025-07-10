@@ -3,6 +3,7 @@ import os
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import padding
 
 KEY = "1ocxv0tgU07NaKmneiQUbAR2RJrbrJnhAgNW1cYufjI="
 
@@ -38,7 +39,6 @@ class SimpleCrypto:
         """
         加密数据。
         """
-        
         if not key:
             key = KEY
         
@@ -59,8 +59,15 @@ class SimpleCrypto:
             # -------------------------------------------------------------
             encryptor = cipher.encryptor()
 
-            # 4. 加密数据
-            padded_data_bytes = encryptor.update(data.encode('utf-8')) + encryptor.finalize()
+
+            # --- Add Padding ---
+            padder = padding.PKCS7(SimpleCrypto.AES_BLOCK_SIZE_BITS).padder() # PKCS7 takes block size in *bits*
+            data_bytes = data.encode('utf-8')
+            padded_data = padder.update(data_bytes) + padder.finalize()
+            # --- End Padding ---
+
+            # Now encrypt the padded data
+            padded_data_bytes = encryptor.update(padded_data) + encryptor.finalize()
 
             # 5. 组合 IV 和密文，然后进行 base64 编码
             encrypted_combined_bytes = iv_bytes + padded_data_bytes
@@ -104,6 +111,12 @@ class SimpleCrypto:
             # 5. 执行解密
             decrypted_data_bytes = decryptor.update(encrypted_text_bytes) + decryptor.finalize()
 
+            # --- Add Unpadding ---
+            unpadder = padding.PKCS7(SimpleCrypto.AES_BLOCK_SIZE_BITS).unpadder() # PKCS7 takes block size in *bits*
+            decrypted_data_bytes = unpadder.update(decrypted_data_bytes) + unpadder.finalize()
+            # --- End Unpadding ---
+
+
             # 6. 将解密后的字节转换为字符串
             return decrypted_data_bytes.decode('utf-8')
 
@@ -112,14 +125,13 @@ class SimpleCrypto:
 
 
 
-# if __name__ == "__main__":
-#     try:
-#         secret_key = "1ocxv0tgU07NaKmneiQUbAR2RJrbrJnhAgNW1cYufjI="
-#         encrypted_base64 = 'fICIWKmdy9o5NpjMg8xJQ2WmZPj8s9AHXfHjFAfDHU0='
+if __name__ == "__main__":
+    try:
+        password = 'Aa123456'
+        encrypted_base64 = SimpleCrypto.encrypt(password)
+        decrypted_data = SimpleCrypto.decrypt(encrypted_base64)
+        print('|' + decrypted_data + '|')
+        # print(f"解密后的数据: {decrypted_data}")
 
-#         decrypted_data = SimpleCrypto.decrypt(encrypted_base64, secret_key)
-#         print(decrypted_data.strip())
-#         # print(f"解密后的数据: {decrypted_data}")
-
-#     except ValueError as e:
-#         print(f"发生错误: {e}")
+    except ValueError as e:
+        print(f"发生错误: {e}")

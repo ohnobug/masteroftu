@@ -37,7 +37,7 @@ const TDSHeader = () => {
       <nav className="flex justify-between items-center max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <div className="flex items-center gap-3">
-            <span className="text-black text-lg font-medium">智能客服</span>
+            <span className="text-black text-lg font-medium">图克教育</span>
             <span className="text-black/70 text-xs font-medium border border-black/30 rounded-full px-3 py-1">
               实验性
             </span>

@@ -2,20 +2,15 @@ from datetime import datetime
 import io
 import json
 from typing import AsyncGenerator, List
-from fastapi import HTTPException
 from pydantic import BaseModel, Field
 import socketio
-from sqlalchemy import MappingResult, insert, select, update
+from sqlalchemy import select, update
+import config
 from database import AsyncSessionLocal, TurChatHistory, TurChatSessions
 from sqlalchemy.ext.asyncio.session import AsyncSession
-import os
 from openai import AsyncOpenAI
 from enum import Enum
-
-client = AsyncOpenAI(
-    api_key=os.environ.get("LLM_API_KEY"),
-    base_url=os.environ.get("LLM_BASE_URL")
-)
+import database
 
 class RoleEnum(str, Enum):
     user = "user"
@@ -27,8 +22,13 @@ class Message(BaseModel):
     content: str
 
 async def llmchat(messages: List[Message]) -> AsyncGenerator[str, None]:
+    client = AsyncOpenAI(
+        api_key=config.LLM_API_KEY,
+        base_url=config.LLM_BASE_URL
+    )
+    
     stream = await client.chat.completions.create(
-        model=os.environ.get("LLM_MODEL_NAME"),
+        model=config.LLM_MODEL_NAME,
         stream=True,
         messages=messages
     )
@@ -38,9 +38,6 @@ async def llmchat(messages: List[Message]) -> AsyncGenerator[str, None]:
 
         if content:
             yield content
-
-# async for event in llmchat("您好"):
-#         print(event)
 
 
 static_files = {}
@@ -56,6 +53,22 @@ sio = socketio.AsyncServer(
 )
 
 app = socketio.ASGIApp(sio, static_files=static_files)
+
+@sio.on('shutdown')
+async def handle_shutdown():
+    print("ASGI shutdown signal received. Disposing database engine...")
+    if  database.engine:
+        await database.engine.dispose()
+        print("Database engine disposed successfully.")
+    else:
+        print("Database engine not found or not initialized.")
+
+# 可以选择添加 startup 事件处理器来做初始化
+@sio.on('startup')
+async def handle_startup():
+     print("ASGI startup signal received.")
+     pass
+
 
 usermap = dict()
 
@@ -98,6 +111,8 @@ class GetTextIn(BaseModel):
 async def chat(sid, data):   
     textin = GetTextIn.model_validate(obj=data)
 
+    userid = usermap[sid]['id']
+
     async with AsyncSessionLocal() as db:
         try:
             db: AsyncSession = db
@@ -110,7 +125,7 @@ async def chat(sid, data):
                 TurChatSessions.created_at
             ).where(
                 TurChatSessions.id == textin.chat_session_id,
-                TurChatSessions.user_id == usermap[sid]['id']
+                TurChatSessions.user_id == userid
             )
             result = await db.execute(query_stmt)
             if result.fetchone() is None:
@@ -127,9 +142,9 @@ async def chat(sid, data):
                 TurChatHistory.created_at
             ).where(
                 TurChatHistory.chat_session_id == textin.chat_session_id,
-                TurChatHistory.user_id == usermap[sid]['id']
+                TurChatHistory.user_id == userid
             ).order_by(
-                TurChatHistory.id.desc()
+                TurChatHistory.id.asc()
             )
             result = await db.execute(query_stmt)
             
@@ -151,29 +166,31 @@ async def chat(sid, data):
                 else:
                     context.append(Message(role=RoleEnum.assistant, content=chat.text))
 
-            with io.StringIO() as text_buffer:
-                # 流式输出到浏览器
-                async for eachtoken in llmchat(context):
-                    text_buffer.write(eachtoken)
-                    await sio.emit("token_output", json.dumps({
-                        "chat_session_id": textin.chat_session_id,
-                        "ai_message_id": textin.ai_message_id,
-                        "token": eachtoken
-                    }), to=sid)
+            text_buffer = io.StringIO()
 
-                # 更新AI回答到数据库
-                query_stmt = update(TurChatHistory).values(
-                    text=text_buffer.getvalue(),
-                    created_at=datetime.now()
-                ).where(
-                    TurChatHistory.id == textin.ai_message_id,
-                    TurChatHistory.sender == "ai",
-                    TurChatHistory.user_id == usermap[sid]['id']
-                )
+            # 流式输出到浏览器
+            async for eachtoken in llmchat(context):
+                text_buffer.write(eachtoken)
+                await sio.emit("token_output", json.dumps({
+                    "chat_session_id": textin.chat_session_id,
+                    "ai_message_id": textin.ai_message_id,
+                    "token": eachtoken
+                }), to=sid)
 
-                result = await db.execute(query_stmt)
+            # 更新AI回答到数据库
+            query_stmt = update(TurChatHistory).values(
+                text=text_buffer.getvalue(),
+                created_at=datetime.now()
+            ).where(
+                TurChatHistory.id == textin.ai_message_id,
+                TurChatHistory.sender == "ai",
+                TurChatHistory.user_id == userid
+            )
+
+            result = await db.execute(query_stmt)
             await db.commit()
         except Exception:
+            print("莫名断开了")
             await db.rollback()
             raise
         finally:

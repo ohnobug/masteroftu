@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
 import { store } from "../store";
-import { setToken } from "../store/chatSlice"
+import { setTokenToMessage } from "../store/chatSlice"
 
 const socket = io(import.meta.env.VITE_WS_BASE_URL, {
     reconnectionDelayMax: 10000,
@@ -20,7 +20,7 @@ socket.on("disconnect", () => {
 
 socket.on('token_output', (data) => {
     const jdata = JSON.parse(data);
-    store.dispatch(setToken({
+    store.dispatch(setTokenToMessage({
         chat_session_id: jdata.chat_session_id,
         ai_message_id: jdata.ai_message_id,
         token: jdata.token

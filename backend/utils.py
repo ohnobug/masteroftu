@@ -1,3 +1,5 @@
+import hashlib
+import json
 import random
 from datetime import datetime, timedelta, timezone
 import aiohttp
@@ -5,28 +7,29 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select, insert, update, func, and_
+from sqlalchemy import select, insert, update, func
+from SimpleCrypto import SimpleCrypto
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, MAX_SMS_PER_DAY, SMS_CODE_EXPIRE_MINUTES
 import database
-from database import TurUser, TurVerificationCode, TurSMSLog
+from database import TurUsers, TurVerificationCode, TurSMSLog
 
 # --- Authentication Utils ---
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+# def get_password_hash(password):
+#     return pwd_context.hash(password)
 
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# def create_access_token(data: dict):
+#     to_encode = data.copy()
+#     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     to_encode.update({
+#         "exp": expire
+#     })
+#     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+#     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -42,7 +45,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    query = select(TurUser).where(TurUser.id == int(user_id))
+    query = select(TurUsers).where(TurUsers.id == int(user_id))
     user = await database.fetch_one(query)
     if user is None:
         raise credentials_exception
@@ -131,8 +134,19 @@ async def get_login_username(cookie: str = None):
             html = await response.text()
             return html
 
+# 得到token
+def get_token(userInfo: TurUsers):
+    return SimpleCrypto.encrypt(json.dumps({
+        "id": userInfo.id,
+        "phone_number": userInfo.phone_number
+        # "expire": int((datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp())
+    }))
+    
 def get_userInfo_from_token(token: str):
-    return {
-        "id": 2,
-        "username": 'admin'
-    }
+    return json.loads(SimpleCrypto.decrypt(token))
+
+# 生成密码哈希
+def password_hash(password: str):
+    m = hashlib.sha256()
+    m.update(password.encode('utf-8'))
+    return m.hexdigest()

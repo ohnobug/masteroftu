@@ -20,6 +20,16 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserRegisterRequestOut(BaseResponse):
+    pass
+    
+class UserRegisterRequestIn(BaseModel):
+    phone_number: str = Field(...)
+    password: str = Field(...)
+    verification_code: str = Field(...)
+
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -52,8 +62,16 @@ class UserInfoRequestOut(BaseModel):
 class UserInfoRequestIn(BaseModel):
     username: str = Field(..., example="")
 
-class UserLoginPrivatetoken(BaseModel):
-    privatetoken: str = Field(..., example="")
+class UserLoginRequestIn(BaseModel):
+    phone_number: str = Field(..., example="")
+    password: str = Field(..., example="")
+
+class UserLoginToken(BaseModel):
+    token: str = Field(...)
+
+class UserLoginRequestOut(BaseResponse):
+    data: UserLoginToken = Field(...)
+
 
 
 class ChatSessionIn(BaseModel):
@@ -99,3 +117,10 @@ class ChatNewmessage(BaseModel):
 
 class ChatNewmessageOut(BaseResponse):
     data: ChatNewmessage = Field(...)
+
+
+class ChatDelsessionIn(BaseModel):
+    chat_session_id: int = Field(...)
+
+class ChatDelsessionOut(BaseResponse):
+    pass

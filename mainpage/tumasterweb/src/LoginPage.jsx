@@ -1,17 +1,18 @@
 import { useState } from "react";
-import axios from "axios";
-
-// 假设这些是你的共享组件，我们继续使用它们保持风格统一
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
+import { APILogin } from "./network/api";
+import { useNavigate } from "react-router";
 
 function LoginPage() {
   // 使用 state 来管理表单输入、错误信息和加载状态
-  const [username, setUsername] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   // 表单提交处理函数
   const handleSubmit = async (event) => {
@@ -19,38 +20,19 @@ function LoginPage() {
     setError(null); // 重置错误信息
     setIsLoading(true); // 开始加载
 
-    try {
-      // --- 使用 Axios 发送登录请求 ---
-      // 请将 '/api/v1/login' 替换成你真实的后端登录API接口
-      const response = await axios.post("/api/v1/login", {
-        username: username,
-        password: password,
-      });
+    const data = await APILogin({
+      phone_number: phoneNumber,
+      password: password,
+    });
 
-      // 登录成功
-      console.log("登录成功:", response.data);
+    if (data.code != 200) {
+      setError(data.message);
       setIsLoading(false);
-
-      // 登录成功后的操作，例如保存token并跳转到主页
-      // localStorage.setItem('token', response.data.token);
-      // window.location.href = '/dashboard'; // 跳转到仪表盘或主页
-    } catch (err) {
-      // 登录失败
-      console.error("登录失败:", err);
-      setIsLoading(false);
-
-      // 根据后端返回的错误信息设置友好的提示
-      if (err.response) {
-        // 请求已发出，但服务器响应的状态码不在 2xx 范围内
-        setError(err.response.data.message || "用户名或密码错误。");
-      } else if (err.request) {
-        // 请求已发出，但没有收到任何响应
-        setError("无法连接到服务器，请检查你的网络。");
-      } else {
-        // 在设置请求时触发了一个错误
-        setError("发生未知错误，请稍后再试。");
-      }
+      return;
     }
+
+    localStorage.setItem("token", data.data.token);
+    navigate("/chat");
   };
 
   return (
@@ -98,8 +80,8 @@ function LoginPage() {
                 <input
                   id="username"
                   type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
                   required
                   className="mt-1 block w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                   placeholder="请输入用户名或邮箱"

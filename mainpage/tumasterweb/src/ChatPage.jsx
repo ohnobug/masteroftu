@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"; // 引入 useState Hook
+import React, { useEffect, useState, useRef } from "react"; // 引入 useState Hook
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import {
@@ -6,10 +6,19 @@ import {
   APIChatSessions,
   APIChatNewSession,
   APIChatNewMessage,
+  APIChatDelMessage,
 } from "./network/api";
 import { useDispatch, useSelector } from "react-redux";
-import { setChatSessions, setCurrentChatId } from "./store/chatSlice";
+import {
+  setChatSessions,
+  setCurrentChatId,
+  setChatMessage,
+} from "./store/chatSlice";
 import socket from "./network/ws";
+import markdownit from "markdown-it";
+import MarkdownItHightlightJS from "markdown-it-highlightjs";
+import "highlight.js/styles/github-dark.css";
+import { useLocation } from "react-router-dom";
 
 function ChatPage() {
   const chatSessions = useSelector((state) => state.chat.chatSessions);
@@ -17,12 +26,14 @@ function ChatPage() {
   const dispatch = useDispatch();
 
   const [input, setInput] = useState(""); // 输入框内容
+  const [inputStr, setInputStr] = useState(""); // 大界面输入框
+  const md = useRef(null); // markdownit实例
+  const chataeraRef = useRef(null); // 对话记录界面
 
-  // 处理发送消息
-  const handleSendMessage = async () => {
+  const newChatSession = async (input, chatId) => {
     if (input.trim()) {
       const data = await APIChatNewMessage({
-        chat_session_id: currentChatId,
+        chat_session_id: chatId,
         text: input.trim(),
       });
 
@@ -32,20 +43,31 @@ function ChatPage() {
       }
 
       // 获取最新消息列表
-      fetchChatHistory(currentChatId);
+      await fetchChatHistory(chatId);
 
       socket.emit("get_text", {
         ai_message_id: data.data.ai_message_id,
-        chat_session_id: currentChatId,
+        chat_session_id: chatId,
       });
 
       setInput("");
+
+      // 如果控件在，则按下回车滚动到最底部
+      if (chataeraRef.current) {
+        chataeraRef.current.scrollTop = chataeraRef.current.scrollHeight;
+      }
     }
   };
 
+  // 处理发送消息
+  const handleSendMessage = async () => {
+    newChatSession(input, currentChatId);
+  };
+
   // 切换会话 (这里只是一个占位符，实际切换需要加载对应会话的消息)
-  const handleSessionClick = (sessionId) => {
+  const handleSessionClick = async (sessionId) => {
     dispatch(setCurrentChatId(sessionId));
+    await fetchChatHistory(sessionId);
   };
 
   const fetchSession = async () => {
@@ -57,6 +79,9 @@ function ChatPage() {
     }
 
     dispatch(setChatSessions(data.data));
+    if (Object.keys(data.data).length == 0) {
+      dispatch(setCurrentChatId(-1));
+    }
   };
 
   const fetchChatHistory = async (id) => {
@@ -69,15 +94,17 @@ function ChatPage() {
       return;
     }
 
-    let newChat = JSON.parse(JSON.stringify(chatSessions));
-    newChat[id].messages = data.data;
-
-    dispatch(setChatSessions(newChat));
+    dispatch(
+      setChatMessage({
+        chat_session_id: id,
+        messages: data.data,
+      })
+    );
   };
 
-  const fetchNewSession = async (text) => {
-    const data = await APIChatNewSession({
-      text: text,
+  const fetchDelSession = async (id) => {
+    const data = await APIChatDelMessage({
+      chat_session_id: id,
     });
 
     if (data.code != 200) {
@@ -85,21 +112,101 @@ function ChatPage() {
       return;
     }
 
+    if (id == currentChatId) {
+      let sortSession = Object.keys(chatSessions).sort((a, b) => b - a);
+      let currentIndex = sortSession.findIndex((item) => item == id);
+
+      let nextId = sortSession[currentIndex + 1];
+
+      if (nextId) {
+        dispatch(setCurrentChatId(nextId));
+      } else {
+        dispatch(
+          setCurrentChatId(sortSession.length != 0 ? sortSession[0] : -1)
+        );
+      }
+    }
+
     await fetchSession();
-    dispatch(setCurrentChatId(data.data["chat_session_id"]));
+  };
+
+  const fetchNewSession = async (text) => {
+    // 新建会话
+    const data1 = await APIChatNewSession({
+      title: text,
+    });
+
+    if (data1.code != 200) {
+      alert(data1.message);
+      return;
+    }
+
+    dispatch(setCurrentChatId(data1.data.chat_session_id));
+
+    // 更新会话列表
+    await fetchSession();
+
+    // 插入新消息
+    const data2 = await APIChatNewMessage({
+      chat_session_id: data1.data.chat_session_id,
+      text: text.trim(),
+    });
+
+    if (data2.code != 200) {
+      alert(data2.message);
+      return;
+    }
+
+    // 获取会话的最新消息列表
+    await fetchChatHistory(data1.data.chat_session_id);
+
+    // 让AI生成回答
+    socket.emit("get_text", {
+      ai_message_id: data2.data.ai_message_id,
+      chat_session_id: data1.data.chat_session_id,
+    });
+
+    setInput("");
   };
 
   useEffect(() => {
     fetchSession();
+
+    md.current = markdownit({
+      html: true,
+      linkify: true,
+      typographer: true,
+    }).use(MarkdownItHightlightJS);
+
+    md.current.renderer.rules.table_open = () =>
+      '<table style="border-collapse: collapse; width: 100%;">';
+    md.current.renderer.rules.table_close = () => "</table>";
+
+    // 修改表头单元格样式
+    md.current.renderer.rules.th_open = () =>
+      '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
+    md.current.renderer.rules.td_open = () =>
+      '<td style="border: 1px solid #ddd; padding: 8px;">';
   }, []);
 
   useEffect(() => {
-    if (currentChatId != -1) {
-      fetchChatHistory(currentChatId);
-    }
-  }, [currentChatId]);
+    if (chataeraRef.current) {
+      console.log("滚动条垂直位置:", chataeraRef.current.scrollTop);
 
-  const [inputStr, setInputStr] = useState("");
+      if (chataeraRef.current.scrollTop > -60) {
+        chataeraRef.current.scrollTop = chataeraRef.current.scrollHeight;
+      }
+    } else {
+      console.log("chataeraRef.current 还没有指向 DOM 元素");
+    }
+  }, [chatSessions]);
+
+  const location = useLocation();
+  useEffect(() => {
+    if (location.state?.input) {
+      fetchNewSession(location.state.input);
+    }
+  }, [location]);
 
   return (
     <>
@@ -122,7 +229,7 @@ function ChatPage() {
         {/* 左侧：会话列表 */}
         <div className="w-64 bg-white/80 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto">
           <button
-            className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors mb-3"
+            className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors mb-3 cursor-pointer"
             onClick={() => {
               dispatch(setCurrentChatId(-1));
             }}
@@ -131,26 +238,61 @@ function ChatPage() {
           </button>
 
           <h2 className="text-lg font-semibold mb-4 text-black">会话记录</h2>
-          <ul>
-            {Object.values(chatSessions).map((session) => (
-              <li
-                key={session.id}
-                className={`cursor-pointer p-2 rounded-md mb-2 transition-colors ${
-                  currentChatId === session.id
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 hover:bg-gray-200 text-black"
-                }`}
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  wordBreak: "keep-all",
-                }}
-                onClick={() => handleSessionClick(session.id)}
-              >
-                {session.title}
-              </li>
-            ))}
-          </ul>
+          {Object.keys(chatSessions).length === 0 ? (
+            <div>无会话</div>
+          ) : (
+            <ul>
+              {Object.values(chatSessions)
+                .sort((a, b) => b.id - a.id)
+                .map((session) => (
+                  <li
+                    key={session.id}
+                    className={`cursor-pointer p-2 rounded-md mb-2 transition-colors flex justify-between ${
+                      currentChatId == session.id
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-black"
+                    }`}
+                    onClick={() => handleSessionClick(session.id)}
+                  >
+                    <div
+                      style={{
+                        textOverflow: "ellipsis",
+                        wordBreak: "keep-all",
+                        width: "180px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {session.title}
+                    </div>
+                    <button
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                      style={{
+                        background: "oklch(0.84 0 0)",
+                        minWidth: "20px",
+                        cursor: "pointer",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fetchDelSession(session.id);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-3 w-3"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
         </div>
 
         {/* 右侧：聊天区域 */}
@@ -207,7 +349,10 @@ function ChatPage() {
         ) : (
           <div className="flex-1 bg-white/90 rounded-lg flex flex-col shadow-lg overflow-hidden">
             {/* 消息显示区域 */}
-            <div className="flex-1 p-4 overflow-y-auto flex flex-col-reverse">
+            <div
+              className="flex-1 p-4 overflow-y-auto flex flex-col-reverse"
+              ref={chataeraRef}
+            >
               {/* 使用 flex-col-reverse 让最新的消息在底部，滚动向上 */}
               {chatSessions[currentChatId]?.messages
                 ? Object.values(chatSessions[currentChatId].messages)
@@ -227,9 +372,10 @@ function ChatPage() {
                               ? "bg-blue-500 text-white rounded-br-none"
                               : "bg-gray-200 text-black rounded-bl-none"
                           }`}
-                        >
-                          {message.text}
-                        </div>
+                          dangerouslySetInnerHTML={{
+                            __html: md.current.render(message.text),
+                          }}
+                        ></div>
                       </div>
                     ))
                 : null}
