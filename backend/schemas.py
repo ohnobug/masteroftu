@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Dict, Optional, List
 from datetime import datetime
 
 
@@ -37,7 +37,7 @@ class SMSLogOut(BaseModel):
     sent_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # --- Password Reset ---
 class ResetPasswordRequest(BaseModel):
@@ -54,3 +54,48 @@ class UserInfoRequestIn(BaseModel):
 
 class UserLoginPrivatetoken(BaseModel):
     privatetoken: str = Field(..., example="")
+
+
+class ChatSessionIn(BaseModel):
+    pass
+
+class ChatSession(BaseModel):
+    id: int
+    title: str
+
+class ChatSessionOut(BaseResponse):
+    data: Dict[int, ChatSession] = Field(...)
+
+class ChatHistoryIn(BaseModel):
+    chat_session_id: int = Field(..., example=1)
+
+class ChatHistory(BaseModel):
+    id: int
+    sender: str
+    text: str
+    created_at: int
+
+class ChatHistoryOut(BaseResponse):
+    data: Dict[int, ChatHistory] = Field(...)
+
+
+class ChatNewsessionIn(BaseModel):
+    title: str = Field(...)
+
+class ChatNewsession(BaseModel):
+    chat_session_id: int
+
+class ChatNewsessionOut(BaseResponse):
+    data: ChatNewsession = Field(...)
+
+
+class ChatNewmessageIn(BaseModel):
+    chat_session_id: int = Field(...)
+    text: str
+
+class ChatNewmessage(BaseModel):
+    chat_message_id: int
+    ai_message_id: int
+
+class ChatNewmessageOut(BaseResponse):
+    data: ChatNewmessage = Field(...)

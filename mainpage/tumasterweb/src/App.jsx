@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { APIUserInfo } from "./network/api.js";
 import { useDispatch } from "react-redux";
 import { setUserinfo } from "./store/userSlice";
+import "./network/ws.js"
 
 const App = () => {
   const dispatch = useDispatch();

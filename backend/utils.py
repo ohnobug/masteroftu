@@ -7,7 +7,8 @@ from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select, insert, update, func, and_
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, MAX_SMS_PER_DAY, SMS_CODE_EXPIRE_MINUTES
-from database import database, User, VerificationCode, SMSLog
+import database
+from database import TurUser, TurVerificationCode, TurSMSLog
 
 # --- Authentication Utils ---
 
@@ -41,7 +42,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    query = select(User).where(User.id == int(user_id))
+    query = select(TurUser).where(TurUser.id == int(user_id))
     user = await database.fetch_one(query)
     if user is None:
         raise credentials_exception
@@ -52,15 +53,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 async def check_sms_rate_limit(phone_number: str):
     """检查短信发送频率限制"""
     one_day_ago = datetime.now(timezone.utc) - timedelta(days=1)
-    query = select(func.count(SMSLog.id)).where(
-        SMSLog.phone_number == phone_number,
-        SMSLog.sent_at >= one_day_ago,
-        SMSLog.status == 'SUCCESS'
+    query = select(func.count(TurSMSLog.id)).where(
+        TurSMSLog.phone_number == phone_number,
+        TurSMSLog.sent_at >= one_day_ago,
+        TurSMSLog.status == 'SUCCESS'
     )
     count = await database.execute(query)
     if count >= MAX_SMS_PER_DAY:
         # 记录超限日志
-        log_query = insert(SMSLog).values(
+        log_query = insert(TurSMSLog).values(
             phone_number=phone_number, content="Rate limit exceeded", status="RATE_LIMITED"
         )
         await database.execute(log_query)
@@ -87,14 +88,14 @@ async def send_sms_code(phone_number: str, purpose: str):
     print("------------------------------------------------")
 
     # 4. 记录发送日志
-    log_query = insert(SMSLog).values(
+    log_query = insert(TurSMSLog).values(
         phone_number=phone_number, content=content, status="SUCCESS"
     )
     await database.execute(log_query)
 
     # 5. 存储验证码到 verification_codes 表
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=SMS_CODE_EXPIRE_MINUTES)
-    code_query = insert(VerificationCode).values(
+    code_query = insert(TurVerificationCode).values(
         phone_number=phone_number, code=code, purpose=purpose, expires_at=expires_at
     )
     await database.execute(code_query)
@@ -104,13 +105,13 @@ async def send_sms_code(phone_number: str, purpose: str):
 async def verify_sms_code(phone_number: str, code: str, purpose: str):
     """校验验证码"""
     now = datetime.now(timezone.utc)
-    query = select(VerificationCode).where(
-        VerificationCode.phone_number == phone_number,
-        VerificationCode.code == code,
-        VerificationCode.purpose == purpose,
-        VerificationCode.is_used == False,
-        VerificationCode.expires_at > now
-    ).order_by(VerificationCode.id.desc())
+    query = select(TurVerificationCode).where(
+        TurVerificationCode.phone_number == phone_number,
+        TurVerificationCode.code == code,
+        TurVerificationCode.purpose == purpose,
+        TurVerificationCode.is_used == False,
+        TurVerificationCode.expires_at > now
+    ).order_by(TurVerificationCode.id.desc())
     
     record = await database.fetch_one(query)
     
@@ -118,7 +119,7 @@ async def verify_sms_code(phone_number: str, code: str, purpose: str):
         return False
     
     # 标记验证码为已使用
-    update_query = update(VerificationCode).where(VerificationCode.id == record.id).values(is_used=True)
+    update_query = update(TurVerificationCode).where(TurVerificationCode.id == record.id).values(is_used=True)
     await database.execute(update_query)
     return True
 
@@ -130,3 +131,8 @@ async def get_login_username(cookie: str = None):
             html = await response.text()
             return html
 
+def get_userInfo_from_token(token: str):
+    return {
+        "id": 2,
+        "username": 'admin'
+    }

@@ -1,27 +1,47 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, TIMESTAMP, Boolean, func, MetaData
+from sqlalchemy import Enum, create_engine, Column, Integer, String, Text, TIMESTAMP, Boolean, func, MetaData
 from sqlalchemy.ext.declarative import declarative_base
-from databases import Database
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 from config import DATABASE_URL
 
-# 使用 databases 库进行异步连接管理
-database = Database(DATABASE_URL)
+engine: AsyncEngine = create_async_engine(
+    DATABASE_URL,
+    echo=True,
+    future=True,
+    pool_size=20,
+    pool_recycle=30,
+    max_overflow=30
+)
+AsyncSessionLocal: sessionmaker = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+async def get_db():
+    async with AsyncSessionLocal() as db:
+        try:
+            yield db
+        except Exception:
+            await db.rollback()
+            raise
+        finally:
+            await db.close()
+
+
 metadata = MetaData()
 Base = declarative_base(metadata=metadata)
 
-# SQLAlchemy Models (对应 SQL 表结构)
-
-class User(Base):
-    __tablename__ = "users"
+class TurUser(Base):
+    __tablename__ = "tur_users"
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
-
-
-class VerificationCode(Base):
-    __tablename__ = "verification_codes"
+class TurVerificationCode(Base):
+    __tablename__ = "tur_verification_codes"
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), nullable=False, index=True)
     code = Column(String(10), nullable=False)
@@ -30,10 +50,8 @@ class VerificationCode(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
-
-
-class SMSLog(Base):
-    __tablename__ = "sms_logs"
+class TurSMSLog(Base):
+    __tablename__ = "tur_sms_logs"
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), nullable=False, index=True)
     content = Column(Text, nullable=False)
@@ -41,5 +59,21 @@ class SMSLog(Base):
     sent_at = Column(TIMESTAMP, server_default=func.now())
 
 
+class TurChatSessions(Base):
+    __tablename__ = "tur_chat_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    title = Column(String(255), nullable=False, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class TurChatHistory(Base):
+    __tablename__ = "tur_chat_history"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    chat_session_id = Column(Integer, index=True)
+    sender = Column(Enum("ai", "user"), nullable=False)
+    text = Column(Text, nullable=False, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
 

@@ -1,33 +1,45 @@
+from datetime import datetime
 import json
-import re
 import aiohttp
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select, insert, update, exists
-from typing import List
-from database import database, User, SMSLog
 import schemas
-import utils
 from SimpleCrypto import SimpleCrypto
 from moodle_api import api_create_users, api_get_autologin_key, api_get_users_by_username
+from database import TurChatSessions, TurChatHistory
+import database
+from sqlalchemy import insert, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+from utils import get_userInfo_from_token
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await database.connect()
-    yield    
-    await database.disconnect()
+    # 启动阶段 (在 yield 之前)
+    print("Application startup...")
+
+    yield
+    
+    print("Application shutdown...")
+
+    # 释放数据库 Engine 和连接池
+    if database.engine:
+        await database.engine.dispose()
+    print("Database engine disposed")
+
+
+# app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
+app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
 
 
 class UnicornException(Exception):
     def __init__(self, message: str, code: int = 400):
         self.code = code
         self.message = message
-
-
-app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
 
 
 @app.exception_handler(UnicornException)
@@ -174,6 +186,14 @@ app.add_middleware(
 #     logs = await database.fetch_all(query)
 #     return logs
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    # 在这里验证 form_data.username 和 form_data.password
+    # 如果验证成功，生成一个 token 并返回
+    # 如果验证失败，抛出 HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, ...)
+    return {"access_token": "your_generated_token", "token_type": "bearer"}
 
 @app.post("/api/register", response_model=schemas.BaseResponse, summary="用户注册")
 async def register(user_data: schemas.UserCreate):
@@ -235,3 +255,130 @@ async def read_users_me(request: schemas.UserInfoRequestIn):
         "username": decryptStr
     }
 
+# 获取会话列表
+@app.post("/api/chat_sessions", response_model=schemas.ChatSessionOut)
+async def chat_sessions(db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+    try:
+        userinfo = get_userInfo_from_token(token)
+    except:
+        HTTPException(status_code=401, detail="Token is invalid")
+
+    query_stmt = select(
+        TurChatSessions.id,
+        TurChatSessions.title,
+        TurChatSessions.created_at
+    ).where(
+        TurChatSessions.user_id == userinfo['id']
+    )
+    data = await db.execute(query_stmt)
+    
+    output = dict()
+    for item in data.mappings():
+        processed_item = dict(item)
+        processed_item['created_at'] = item['created_at'].timestamp()
+        output[processed_item['id']] = processed_item
+        
+    return schemas.ChatSessionOut(
+            code=200,
+            message="Success",
+            data=output
+        )
+
+# 获取会话的历史信息
+@app.post("/api/chat_history", response_model=schemas.ChatHistoryOut)
+async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+    try:
+        userinfo = get_userInfo_from_token(token)
+    except:
+        HTTPException(status_code=401, detail="Token is invalid")
+
+    query_stmt = select(
+        TurChatHistory.id, 
+        TurChatHistory.sender, 
+        TurChatHistory.text, 
+        TurChatHistory.created_at
+    ).where(
+        TurChatHistory.chat_session_id == request.chat_session_id,
+        TurChatHistory.user_id == userinfo['id']
+    ).order_by(
+        TurChatHistory.created_at.desc()
+    )
+
+    data = await db.execute(query_stmt)
+    
+    output = dict()
+    for item in data.mappings():
+        processed_item = dict(item)
+        processed_item['created_at'] = item['created_at'].timestamp()
+        output[processed_item['id']] = processed_item
+
+    return schemas.ChatHistoryOut(
+            code=200,
+            message="Success",
+            data=output
+        )
+
+# 新建会话
+@app.post("/api/chat_newsession", response_model=schemas.ChatNewsessionOut)
+async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+    try:
+        userinfo = get_userInfo_from_token(token)
+    except:
+        HTTPException(status_code=401, detail="Token is invalid")
+
+    # 插入会话
+    query_stmt = insert(TurChatSessions).values(
+        user_id = userinfo['id'],
+        title = request.title,
+    )
+
+    data = await db.execute(query_stmt)
+    chatSessionId = data.inserted_primary_key[0]
+    await db.commit()
+
+    return schemas.ChatNewsessionOut(
+            code=200,
+            message="Success",
+            data=schemas.ChatNewsession(chat_session_id=chatSessionId)
+        )
+
+# 发送消息
+@app.post("/api/chat_newmessage", response_model=schemas.ChatNewmessageOut)
+async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+    try:
+        userinfo = get_userInfo_from_token(token)
+    except:
+        HTTPException(status_code=401, detail="Token is invalid")
+
+    # 插入历史记录
+    query_stmt = insert(TurChatHistory).values(
+        user_id = userinfo['id'],
+        chat_session_id = request.chat_session_id,
+        sender = "user",
+        text = request.text,
+    )
+
+    data = await db.execute(query_stmt)
+    chatMessageId = data.inserted_primary_key[0]
+    
+    # 插入空白消息等待AI回复
+    query_stmt = insert(TurChatHistory).values(
+        user_id = userinfo['id'],
+        chat_session_id = request.chat_session_id,
+        sender = "ai",
+        text = "",
+    )
+
+    data = await db.execute(query_stmt)
+    aiMessageId = data.inserted_primary_key[0]
+
+    await db.commit()
+    
+    return schemas.ChatNewmessageOut(
+            code=200,
+            message="Success",
+            data=schemas.ChatNewmessage(
+                chat_message_id=chatMessageId,
+                ai_message_id=aiMessageId
+            )
+        )

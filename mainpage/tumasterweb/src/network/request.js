@@ -5,6 +5,7 @@ const request = axios.create({
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
+        "Authorization": "bearer aaaaaaaaaa"
     },
     responseType: "json",
 });
