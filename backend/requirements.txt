@@ -11,3 +11,4 @@ aiohttp
 cryptography
 python-socketio
 openai
+asyncmy==0.2.10

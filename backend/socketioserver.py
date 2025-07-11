@@ -22,6 +22,12 @@ class Message(BaseModel):
     role: RoleEnum
     content: str
 
+
+class GetTextIn(BaseModel):
+    ai_message_id: int = Field(...)
+    chat_session_id: int = Field(...)
+
+
 async def llmchat(messages: List[Message]) -> AsyncGenerator[str, None]:
     client = AsyncOpenAI(
         api_key=config.LLM_API_KEY,
@@ -41,20 +47,29 @@ async def llmchat(messages: List[Message]) -> AsyncGenerator[str, None]:
             yield content
 
 
-static_files = {}
+static_files = {
+    '/static': './public',
+}
 sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     async_mode='asgi',
-    namespaces=['/chat'],
-    cors_allowed_origins=[
-        'http://localhost:5000',
-        'http://localhost:5173',
-        'https://admin.socket.io',
-    ]
+    cors_allowed_origins='*'
+    # cors_allowed_origins=[
+    #     'http://localhost:5000',
+    #     'http://localhost:5173',
+    #     'https://admin.socket.io',
+    # ]
 )
 
 app = socketio.ASGIApp(sio, static_files=static_files)
+
+
+@sio.on('startup')
+async def handle_startup():
+     print("ASGI startup signal received.")
+     pass
+
 
 @sio.on('shutdown')
 async def handle_shutdown():
@@ -65,130 +80,166 @@ async def handle_shutdown():
     else:
         print("Database engine not found or not initialized.")
 
-# 可以选择添加 startup 事件处理器来做初始化
-@sio.on('startup')
-async def handle_startup():
-     print("ASGI startup signal received.")
-     pass
+class WschatNamespace(socketio.AsyncNamespace):
+    async def on_connect(self, sid, environ):
 
+        print("\n" * 30)
+        print("❤️" * 30)
+        
+        print(f"Client connected: {sid}")
 
-@sio.event(namespace='/chat')
-async def connect(sid, environ):
-    try:
-        bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
-        userinfo = get_userInfo_from_token(bearer)
-        with sio.session(sid) as session:
-            session['id'] = userinfo.id
-            session['phone_number'] = userinfo.phone_number
-    except socketio.exceptions.ConnectionRefusedError as e:
-        # 捕获 ConnectionRefusedError 并重新抛出
-        # 这样做可以让你在抛出前打印或记录特定信息，或者根据不同原因抛出不同异常
-        print(f"Connection refused for sid {sid}: {e}")
-        raise e # 重新抛出异常，拒绝连接
-    except Exception as e:
-        # 捕获其他潜在错误（如 split() 错误、get() 返回 None 等）
-        print(f"Authentication process error for sid {sid}: {e}")
-        # 对于意外错误，同样拒绝连接
-        raise socketio.exceptions.ConnectionRefusedError(f'认证过程中发生错误: {e}')
+        print("--- Request Headers and relevant environ info ---")
 
+        # 字典用于存储提取的头信息
+        headers = {}
 
-@sio.event(namespace='/chat')
-async def disconnect(sid, reason):
-    async with sio.session(sid) as session:
-        print('disconnect ', sid, reason, session['phone_number'])
+        # 遍历 environ 字典
+        for key, value in environ.items():
+            # 识别标准的 HTTP 头 (以 'HTTP_' 开头)
+            if key.startswith('HTTP_'):
+                # 转换键名回标准的 HTTP 头格式 (移除 HTTP_, 下划线转破折号, 并格式化大小写)
+                # 例如: 'HTTP_USER_AGENT' -> 'User-Agent'
+                header_name = key[5:].replace('_', '-').title()
+                headers[header_name] = value
+            # 识别 CONTENT_TYPE 和 CONTENT_LENGTH (标准 WSGI 环境变量，代表请求头)
+            elif key in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+                headers[key.replace('_', '-').title()] = value # 同样格式化键名
 
+        # 打印提取的所有头信息
+        for name, value in headers.items():
+            print(f"  {name}: {value}")
 
-class GetTextIn(BaseModel):
-    ai_message_id: int = Field(...)
-    chat_session_id: int = Field(...)
+        print("--- Other useful environ info (not strictly headers) ---")
+        # 打印其他常用的非头信息，这些也是请求环境的一部分
+        print(f"  Remote Address: {environ.get('REMOTE_ADDR')}")
+        print(f"  Request Method: {environ.get('REQUEST_METHOD')}")
+        print(f"  Path Info: {environ.get('PATH_INFO')}")
+        print(f"  Query String: {environ.get('QUERY_STRING')}")
+        print(f"  Server Name: {environ.get('SERVER_NAME')}")
+        print(f"  Server Port: {environ.get('SERVER_PORT')}")
+        print(f"  WSGI Version: {environ.get('wsgi.version')}")
+        print(f"  WSGI URL Scheme: {environ.get('wsgi.url_scheme')}")
+        print("❤️" * 30)
+        print("\n" * 30)
+        
+        
+        try:
+            bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
+            
+            print("\n" * 5)
+            print(environ.get('HTTP_AUTHORIZATION'))
+            print("\n" * 5)
+            
+            userinfo = get_userInfo_from_token(bearer)
+            print(userinfo)
+            print("\n" * 5)
 
+            async with self.session(sid) as session:
+                session['id'] = userinfo['id']
+                session['phone_number'] = userinfo['phone_number']
+        except socketio.exceptions.ConnectionRefusedError as e:
+            # 捕获 ConnectionRefusedError 并重新抛出
+            # 这样做可以让你在抛出前打印或记录特定信息，或者根据不同原因抛出不同异常
+            print(f"Connection refused for sid {sid}: {e}")
+            raise e # 重新抛出异常，拒绝连接
+        except Exception as e:
+            # 捕获其他潜在错误（如 split() 错误、get() 返回 None 等）
+            print(f"Authentication process error for sid {sid}: {e}")
+            # 对于意外错误，同样拒绝连接
+            raise socketio.exceptions.ConnectionRefusedError(f'认证过程中发生错误: {e}')
 
-@sio.event(namespace='/chat')
-async def get_text(sid, data):   
-    textin = GetTextIn.model_validate(obj=data)
+    async def on_disconnect(self, sid, reason):
+        print('disconnect ', sid, reason)
 
-    async with sio.session(sid) as session:
-        async with AsyncSessionLocal() as db:
+    async def on_get_text(self, sid, data):
+        textin = GetTextIn.model_validate(obj=data)
+
+        async with self.session(sid) as session:
             userid = session['id']
-            try:
-                db: AsyncSession = db
-                            
-                # 查找会话记录
-                query_stmt = select(
-                    TurChatSessions.id, 
-                    TurChatSessions.user_id, 
-                    TurChatSessions.title, 
-                    TurChatSessions.created_at
-                ).where(
-                    TurChatSessions.id == textin.chat_session_id,
-                    TurChatSessions.user_id == userid
-                )
-                result = await db.execute(query_stmt)
-                if result.fetchone() is None:
-                    await sio.emit('response_text', {'data': '没找到会话记录'}, to=sid)
-                    return
+            async with AsyncSessionLocal() as db:
+                try:
+                    db: AsyncSession = db
 
-                # 查找该会话的所有历史记录
-                query_stmt = select(
-                    TurChatHistory.id, 
-                    TurChatHistory.user_id,
-                    TurChatHistory.chat_session_id,
-                    TurChatHistory.sender,
-                    TurChatHistory.text,
-                    TurChatHistory.created_at
-                ).where(
-                    TurChatHistory.chat_session_id == textin.chat_session_id,
-                    TurChatHistory.user_id == userid
-                ).order_by(
-                    TurChatHistory.id.asc()
-                )
-                result = await db.execute(query_stmt)
-                
-                history: List[TurChatHistory] = result.mappings().all()            
-                historyLength = len(history)
+                    # 查找会话记录
+                    query_stmt = select(
+                        TurChatSessions.id, 
+                        TurChatSessions.user_id, 
+                        TurChatSessions.title, 
+                        TurChatSessions.created_at
+                    ).where(
+                        TurChatSessions.id == textin.chat_session_id,
+                        TurChatSessions.user_id == userid
+                    )
+                    result = await db.execute(query_stmt)
+                    if result.fetchone() is None:
+                        await self.emit('response_text', {'data': '没找到会话记录'}, to=sid)
+                        return
 
-                # 整理成上下文提交给大模型
-                context = []
-                for key, chat in enumerate(history):
-                    # 判断用户提供的id与数据库的id是否对应
-                    if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
-                        if chat.id != textin.ai_message_id:
-                            await sio.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
-                            return
-                        continue
+                    # 查找该会话的所有历史记录
+                    query_stmt = select(
+                        TurChatHistory.id, 
+                        TurChatHistory.user_id,
+                        TurChatHistory.chat_session_id,
+                        TurChatHistory.sender,
+                        TurChatHistory.text,
+                        TurChatHistory.created_at
+                    ).where(
+                        TurChatHistory.chat_session_id == textin.chat_session_id,
+                        TurChatHistory.user_id == userid
+                    ).order_by(
+                        TurChatHistory.id.asc()
+                    )
+                    result = await db.execute(query_stmt)
+                    
+                    history: List[TurChatHistory] = result.mappings().all()            
+                    historyLength = len(history)
 
-                    if chat.sender == 'user':
-                        context.append(Message(role=RoleEnum.user, content=chat.text))
-                    else:
-                        context.append(Message(role=RoleEnum.assistant, content=chat.text))
+                    # 整理成上下文提交给大模型
+                    context = []
+                    for key, chat in enumerate(history):
+                        # 判断用户提供的id与数据库的id是否对应
+                        if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
+                            if chat.id != textin.ai_message_id:
+                                await self.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
+                                return
+                            continue
 
-                text_buffer = io.StringIO()
+                        if chat.sender == 'user':
+                            context.append(Message(role=RoleEnum.user, content=chat.text))
+                        else:
+                            context.append(Message(role=RoleEnum.assistant, content=chat.text))
 
-                # 流式输出到浏览器
-                async for eachtoken in llmchat(context):
-                    text_buffer.write(eachtoken)
-                    await sio.emit("token_output", json.dumps({
-                        "chat_session_id": textin.chat_session_id,
-                        "ai_message_id": textin.ai_message_id,
-                        "token": eachtoken
-                    }), to=sid)
+                    text_buffer = io.StringIO()
 
-                # 更新AI回答到数据库
-                query_stmt = update(TurChatHistory).values(
-                    text=text_buffer.getvalue(),
-                    created_at=datetime.now()
-                ).where(
-                    TurChatHistory.id == textin.ai_message_id,
-                    TurChatHistory.sender == "ai",
-                    TurChatHistory.user_id == userid
-                )
+                    # 流式输出到浏览器
+                    async for eachtoken in llmchat(context):
+                        text_buffer.write(eachtoken)
+                        await self.emit("token_output", json.dumps({
+                            "chat_session_id": textin.chat_session_id,
+                            "ai_message_id": textin.ai_message_id,
+                            "token": eachtoken
+                        }), to=sid)
 
-                result = await db.execute(query_stmt)
-                await db.commit()
-            except Exception:
-                print("莫名断开了")
-                await db.rollback()
-                raise
-            finally:
-                await db.close()
+                    # 更新AI回答到数据库
+                    query_stmt = update(TurChatHistory).values(
+                        text=text_buffer.getvalue(),
+                        created_at=datetime.now()
+                    ).where(
+                        TurChatHistory.id == textin.ai_message_id,
+                        TurChatHistory.sender == "ai",
+                        TurChatHistory.user_id == userid
+                    )
 
+                    result = await db.execute(query_stmt)
+                    await db.commit()
+                except Exception:
+                    print("莫名断开了")
+                    await db.rollback()
+                    raise
+                finally:
+                    await db.close()
+
+    async def on_test(self, sid, data):
+        await self.emit("test_response", "hello now is" + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), to=sid)
+
+sio.register_namespace(WschatNamespace('/'))

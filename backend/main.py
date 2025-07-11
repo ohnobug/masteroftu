@@ -67,7 +67,7 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={
                 "code": 401,
-                "message": "用户尚未登录", # 更友好的消息
+                "message": exc.detail
             }
         )
     else:
@@ -103,14 +103,11 @@ app.add_middleware(
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@app.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    # 在这里验证 form_data.username 和 form_data.password
-    # 如果验证成功，生成一个 token 并返回
-    # 如果验证失败，抛出 HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, ...)
-    return {"access_token": "your_generated_token", "token_type": "bearer"}
+# @app.post("/token")
+# async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+#     return {"access_token": "*******************", "token_type": "bearer"}
 
-
+# 登录
 @app.post("/api/login", response_model=schemas.UserLoginRequestOut)
 async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(database.get_db)):
     """
@@ -121,7 +118,7 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
     userinfo = result.scalar_one_or_none()
 
     if userinfo is None:
-        raise HTTPException(status_code=400, detail="该账号尚未注册")
+        raise HTTPException(status_code=401, detail="该账号尚未注册")
 
     checkPassword = password_hash(request.password)
     if (checkPassword == userinfo.password_hash):
@@ -133,8 +130,9 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
             data=schemas.UserLoginToken(token=token)
         )
     else:
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+        raise HTTPException(status_code=401, detail="用户密码错误")
 
+# 注册
 @app.post("/api/register", response_model=schemas.UserRegisterRequestOut, summary="用户注册")
 async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = Depends(database.get_db)):
     """
@@ -145,14 +143,14 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
     )
     result = await db.execute(query_stmt)
     if result.fetchone() is not None:
-        raise HTTPException(status_code=400, detail="手机号已被注册")
+        raise HTTPException(status_code=409, detail="手机号已被注册")
 
     passwordh = password_hash(request.password)
     insert_stmt = insert(TurUsers).values(
         phone_number=request.phone_number,
         password_hash=passwordh
     )
-    
+
     result = await db.execute(insert_stmt)
     result.inserted_primary_key[0]
     await db.commit()
@@ -161,38 +159,15 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
         code=200,
         message="注册成功"
     )
-    
-    # async with aiohttp.ClientSession() as session:
-    #     # 检测手机号是否已存在
-    #     userinfo = await api_get_users_by_username(session, [user_data.phone_number])
-    #     if userinfo:
-    #         raise UnicornException(code=400, message="手机号已被注册")
-        
-    #     # 注册新账号
-    #     result = await api_create_users(session, [{
-    #         'username': user_data.phone_number,
-    #         'password': user_data.password,
-    #         'firstname': "姓",
-    #         'lastname': "名",
-    #         'email': user_data.phone_number + "@turcar.net.cn",
-    #     }])
-
-    # if result is None:
-    #     raise UnicornException(code=400, message=json.dumps(result))
-
-    # return schemas.BaseResponse(
-    #     code=200,
-    #     message="注册成功"
-    # )
 
 
+# 获取用户信息
 @app.post("/api/userinfo", response_model=schemas.UserInfoRequestOut)
 async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
-
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     print(userinfo)
     
@@ -211,7 +186,7 @@ async def chat_sessions(db: AsyncSession = Depends(database.get_db), token: str 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     query_stmt = select(
         TurChatSessions.id,
@@ -236,13 +211,14 @@ async def chat_sessions(db: AsyncSession = Depends(database.get_db), token: str 
             data=output
         )
 
+
 # 获取会话的历史信息
 @app.post("/api/chat_history", response_model=schemas.ChatHistoryOut)
 async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     query_stmt = select(
         TurChatHistory.id, 
@@ -270,13 +246,14 @@ async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depend
             data=output
         )
 
+
 # 新建会话
 @app.post("/api/chat_newsession", response_model=schemas.ChatNewsessionOut)
 async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     # 插入会话
     query_stmt = insert(TurChatSessions).values(
@@ -295,12 +272,13 @@ async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = 
         )
 
 
+# 删除会话
 @app.post("/api/chat_delsession", response_model=schemas.ChatDelsessionOut)
 async def chat_delsession(request: schemas.ChatDelsessionIn, db: AsyncSession = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     # 删除会话
     query_stmt = delete(TurChatSessions).where(
@@ -322,7 +300,7 @@ async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="Token is invalid")
+        HTTPException(status_code=401, detail="用户尚未登录")
 
     # 插入历史记录
     query_stmt = insert(TurChatHistory).values(

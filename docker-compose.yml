@@ -2,14 +2,14 @@ services:
   mariadb:
     image: docker.io/bitnami/mariadb:latest
     environment:
-      # ALLOW_EMPTY_PASSWORD is recommended only for development.
-      # - ALLOW_EMPTY_PASSWORD=yes
       - MARIADB_ROOT_PASSWORD=Turcarai2025
       - MARIADB_USER=bn_moodle
       - MARIADB_PASSWORD=Turcarai2025
       - MARIADB_DATABASE=bitnami_moodle
       - MARIADB_CHARACTER_SET=utf8mb4
       - MARIADB_COLLATE=utf8mb4_unicode_ci
+    ports:
+      - 3306:3306
     volumes:
       - 'mariadb_data:/bitnami/mariadb'
     networks:
@@ -29,30 +29,12 @@ services:
       - MOODLE_DATABASE_PASSWORD=Turcarai2025
       - MOODLE_DATABASE_NAME=bitnami_moodle
       - PHP_DEFAULT_MEMORY_LIMIT=4096M
-      # ALLOW_EMPTY_PASSWORD is recommended only for development.
-      # - ALLOW_EMPTY_PASSWORD=yes
     volumes:
       - './php.ini:/opt/bitnami/php/etc/php.ini'
       - './moodle:/bitnami/moodle'
-      # - 'moodle_data:/bitnami/moodle'
       - 'moodledata_data:/bitnami/moodledata'
     depends_on:
       - mariadb
-    networks:
-      - moodle_network
-
-  nginx:
-    build:
-      context: ./mainpage
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./mainpage/static-files:/usr/share/nginx/html:ro
-    restart: unless-stopped
-    depends_on:
-      - moodle
     networks:
       - moodle_network
 
@@ -67,10 +49,10 @@ services:
       - DB_HOST=mariadb
       - DB_NAME=tur
     ports:
-      - "8000:8000"
+      - "8001:8000"
     restart: unless-stopped
     depends_on:
-      - moodle
+      - mariadb
     networks:
       - moodle_network
 
@@ -84,11 +66,31 @@ services:
       - DB_PORT=3306
       - DB_HOST=mariadb
       - DB_NAME=tur
+      - LLM_API_KEY=ollama
+      - LLM_BASE_URL=http://192.168.0.5:11434/v1
+      - LLM_MODEL_NAME=qwen2.5
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5000"
+    depends_on:
+      - mariadb
+    networks:
+      - moodle_network
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/static-files:/usr/share/nginx/html:ro
+    restart: unless-stopped
     depends_on:
       - moodle
+      - newmoodle_ws
+      - newmoodle_api
     networks:
       - moodle_network
 
