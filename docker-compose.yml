@@ -56,13 +56,37 @@ services:
     networks:
       - moodle_network
 
-  newmoodle:
+  newmoodle_api:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_api
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=Turcarai2025
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - DB_NAME=tur
     ports:
-      - "8001:8001"
+      - "8000:8000"
     restart: unless-stopped
+    depends_on:
+      - moodle
+    networks:
+      - moodle_network
+
+  newmoodle_ws:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile_ws
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=Turcarai2025
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - DB_NAME=tur
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
     depends_on:
       - moodle
     networks:
