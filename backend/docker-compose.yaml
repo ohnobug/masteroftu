@@ -1,36 +1,18 @@
-# version: '3.8'
+version: '3.8'
 
-# services:
-#   api:
-#     build: .
-#     container_name: fastapi_sms_api
-#     restart: always
-#     env_file:
-#       - .env
-#     environment:
-#       - DATABASE_URL=mysql+aiomysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
-#     ports:
-#       - "8001:8001"
-#     # depends_on:
-#     #   - db
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: Dockerfile_api
+    restart: always
+    ports:
+      - "8000:8000"
 
-#   # db:
-#   #   image: mysql:8.0
-#   #   container_name: fastapi_sms_db
-#   #   restart: always
-#   #   command: --default-authentication-plugin=mysql_native_password
-#   #   env_file:
-#   #     - .env
-#   #   environment:
-#   #     - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-#   #     - MYSQL_DATABASE=${MYSQL_DATABASE}
-#   #     - MYSQL_USER=${MYSQL_USER}
-#   #     - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-#   #   ports:
-#   #     - "3307:3306"
-#   #   volumes:
-#   #     - db_data:/var/lib/mysql
-
-# # 定义具名卷
-# volumes:
-#   db_data:
+  ws:
+    build:
+      context: ./
+      dockerfile: Dockerfile_ws
+    restart: always
+    ports:
+      - "5000:5000"
