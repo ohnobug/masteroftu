@@ -46,6 +46,7 @@ sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     async_mode='asgi',
+    namespaces=['/chat'],
     cors_allowed_origins=[
         'http://localhost:5000',
         'http://localhost:5173',
@@ -71,15 +72,14 @@ async def handle_startup():
      pass
 
 
-usermap = dict()
-
-
-@sio.event
+@sio.event(namespace='/chat')
 async def connect(sid, environ):
     try:
         bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
         userinfo = get_userInfo_from_token(bearer)
-        usermap[sid] = userinfo
+        with sio.session(sid) as session:
+            session['id'] = userinfo.id
+            session['phone_number'] = userinfo.phone_number
     except socketio.exceptions.ConnectionRefusedError as e:
         # 捕获 ConnectionRefusedError 并重新抛出
         # 这样做可以让你在抛出前打印或记录特定信息，或者根据不同原因抛出不同异常
@@ -91,11 +91,11 @@ async def connect(sid, environ):
         # 对于意外错误，同样拒绝连接
         raise socketio.exceptions.ConnectionRefusedError(f'认证过程中发生错误: {e}')
 
-@sio.event
+
+@sio.event(namespace='/chat')
 async def disconnect(sid, reason):
-    print('disconnect ', sid, reason, usermap[sid])
-    if sid in usermap:
-        del usermap[sid]
+    async with sio.session(sid) as session:
+        print('disconnect ', sid, reason, session['phone_number'])
 
 
 class GetTextIn(BaseModel):
@@ -103,92 +103,92 @@ class GetTextIn(BaseModel):
     chat_session_id: int = Field(...)
 
 
-@sio.on('get_text')
-async def chat(sid, data):   
+@sio.event(namespace='/chat')
+async def get_text(sid, data):   
     textin = GetTextIn.model_validate(obj=data)
 
-    userid = usermap[sid]['id']
+    async with sio.session(sid) as session:
+        async with AsyncSessionLocal() as db:
+            userid = session['id']
+            try:
+                db: AsyncSession = db
+                            
+                # 查找会话记录
+                query_stmt = select(
+                    TurChatSessions.id, 
+                    TurChatSessions.user_id, 
+                    TurChatSessions.title, 
+                    TurChatSessions.created_at
+                ).where(
+                    TurChatSessions.id == textin.chat_session_id,
+                    TurChatSessions.user_id == userid
+                )
+                result = await db.execute(query_stmt)
+                if result.fetchone() is None:
+                    await sio.emit('response_text', {'data': '没找到会话记录'}, to=sid)
+                    return
 
-    async with AsyncSessionLocal() as db:
-        try:
-            db: AsyncSession = db
-                        
-            # 查找会话记录
-            query_stmt = select(
-                TurChatSessions.id, 
-                TurChatSessions.user_id, 
-                TurChatSessions.title, 
-                TurChatSessions.created_at
-            ).where(
-                TurChatSessions.id == textin.chat_session_id,
-                TurChatSessions.user_id == userid
-            )
-            result = await db.execute(query_stmt)
-            if result.fetchone() is None:
-                await sio.emit('response_text', {'data': '没找到会话记录'}, to=sid)
-                return
+                # 查找该会话的所有历史记录
+                query_stmt = select(
+                    TurChatHistory.id, 
+                    TurChatHistory.user_id,
+                    TurChatHistory.chat_session_id,
+                    TurChatHistory.sender,
+                    TurChatHistory.text,
+                    TurChatHistory.created_at
+                ).where(
+                    TurChatHistory.chat_session_id == textin.chat_session_id,
+                    TurChatHistory.user_id == userid
+                ).order_by(
+                    TurChatHistory.id.asc()
+                )
+                result = await db.execute(query_stmt)
+                
+                history: List[TurChatHistory] = result.mappings().all()            
+                historyLength = len(history)
 
-            # 查找该会话的所有历史记录
-            query_stmt = select(
-                TurChatHistory.id, 
-                TurChatHistory.user_id,
-                TurChatHistory.chat_session_id,
-                TurChatHistory.sender,
-                TurChatHistory.text,
-                TurChatHistory.created_at
-            ).where(
-                TurChatHistory.chat_session_id == textin.chat_session_id,
-                TurChatHistory.user_id == userid
-            ).order_by(
-                TurChatHistory.id.asc()
-            )
-            result = await db.execute(query_stmt)
-            
-            history: List[TurChatHistory] = result.mappings().all()            
-            historyLength = len(history)
+                # 整理成上下文提交给大模型
+                context = []
+                for key, chat in enumerate(history):
+                    # 判断用户提供的id与数据库的id是否对应
+                    if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
+                        if chat.id != textin.ai_message_id:
+                            await sio.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
+                            return
+                        continue
 
-            # 整理成上下文提交给大模型
-            context = []
-            for key, chat in enumerate(history):
-                # 判断用户提供的id与数据库的id是否对应
-                if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
-                    if chat.id != textin.ai_message_id:
-                        await sio.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
-                        return
-                    continue
+                    if chat.sender == 'user':
+                        context.append(Message(role=RoleEnum.user, content=chat.text))
+                    else:
+                        context.append(Message(role=RoleEnum.assistant, content=chat.text))
 
-                if chat.sender == 'user':
-                    context.append(Message(role=RoleEnum.user, content=chat.text))
-                else:
-                    context.append(Message(role=RoleEnum.assistant, content=chat.text))
+                text_buffer = io.StringIO()
 
-            text_buffer = io.StringIO()
+                # 流式输出到浏览器
+                async for eachtoken in llmchat(context):
+                    text_buffer.write(eachtoken)
+                    await sio.emit("token_output", json.dumps({
+                        "chat_session_id": textin.chat_session_id,
+                        "ai_message_id": textin.ai_message_id,
+                        "token": eachtoken
+                    }), to=sid)
 
-            # 流式输出到浏览器
-            async for eachtoken in llmchat(context):
-                text_buffer.write(eachtoken)
-                await sio.emit("token_output", json.dumps({
-                    "chat_session_id": textin.chat_session_id,
-                    "ai_message_id": textin.ai_message_id,
-                    "token": eachtoken
-                }), to=sid)
+                # 更新AI回答到数据库
+                query_stmt = update(TurChatHistory).values(
+                    text=text_buffer.getvalue(),
+                    created_at=datetime.now()
+                ).where(
+                    TurChatHistory.id == textin.ai_message_id,
+                    TurChatHistory.sender == "ai",
+                    TurChatHistory.user_id == userid
+                )
 
-            # 更新AI回答到数据库
-            query_stmt = update(TurChatHistory).values(
-                text=text_buffer.getvalue(),
-                created_at=datetime.now()
-            ).where(
-                TurChatHistory.id == textin.ai_message_id,
-                TurChatHistory.sender == "ai",
-                TurChatHistory.user_id == userid
-            )
-
-            result = await db.execute(query_stmt)
-            await db.commit()
-        except Exception:
-            print("莫名断开了")
-            await db.rollback()
-            raise
-        finally:
-            await db.close()
+                result = await db.execute(query_stmt)
+                await db.commit()
+            except Exception:
+                print("莫名断开了")
+                await db.rollback()
+                raise
+            finally:
+                await db.close()
 

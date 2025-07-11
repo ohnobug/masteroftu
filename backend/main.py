@@ -192,8 +192,8 @@ async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Dep
         userinfo = get_userInfo_from_token(token)
     except:
         HTTPException(status_code=401, detail="Token is invalid")
-    
-    
+
+
     print(userinfo)
     
     return schemas.UserInfoRequestOut(
@@ -203,7 +203,6 @@ async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Dep
             phone_number=userinfo['phone_number']
         )
     )
-
 
 
 # 获取会话列表
