@@ -40,25 +40,6 @@ class TurUsers(Base):
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
-class TurVerificationCode(Base):
-    __tablename__ = "tur_verification_codes"
-    id = Column(Integer, primary_key=True, index=True)
-    phone_number = Column(String(20), nullable=False, index=True)
-    code = Column(String(10), nullable=False)
-    purpose = Column(String(50), nullable=False)
-    is_used = Column(Boolean, default=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-
-class TurSMSLog(Base):
-    __tablename__ = "tur_sms_logs"
-    id = Column(Integer, primary_key=True, index=True)
-    phone_number = Column(String(20), nullable=False, index=True)
-    content = Column(Text, nullable=False)
-    status = Column(String(20), nullable=False)
-    sent_at = Column(TIMESTAMP, server_default=func.now())
-
-
 class TurChatSessions(Base):
     __tablename__ = "tur_chat_sessions"
     id = Column(Integer, primary_key=True, index=True)
@@ -74,6 +55,16 @@ class TurChatHistory(Base):
     chat_session_id = Column(Integer, index=True)
     sender = Column(Enum("ai", "user"), nullable=False)
     text = Column(Text, nullable=False, index=True)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class TurVerifyCodes(Base):
+    __tablename__ = "tur_verify_codes"
+    id = Column(Integer, primary_key=True, index=True)
+    phone_number = Column(String(20), nullable=False, index=True)
+    code = Column(String(10), nullable=False)
+    purpose = Column(String(50), nullable=False)
+    is_used = Column(Boolean, default=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 

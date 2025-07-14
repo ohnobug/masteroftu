@@ -193,7 +193,7 @@ function AboutPage() {
               <div className="group block bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 <div className="relative">
                   <img
-                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1974&auto=format&fit=crop"
+                    src="/images/people1.webp"
                     alt="团队成员照片"
                     className="w-full h-80 object-cover object-top transition-transform duration-300 group-hover:scale-105"
                   />
@@ -213,7 +213,7 @@ function AboutPage() {
               <div className="group block bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 <div className="relative">
                   <img
-                    src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=2070&auto=format&fit=crop"
+                    src="/images/people2.webp"
                     alt="团队成员照片"
                     className="w-full h-80 object-cover object-top transition-transform duration-300 group-hover:scale-105"
                   />
@@ -234,14 +234,14 @@ function AboutPage() {
               <div className="group block bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 <div className="relative">
                   <img
-                    src="https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop"
+                    src="/images/people3.webp"
                     alt="团队成员照片"
                     className="w-full h-80 object-cover object-top transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div className="p-5">
                   <h3 className="text-lg font-bold text-black mb-1 group-hover:text-sky-600 transition-colors">
-                    李老师
+                    贺老师
                   </h3>
                   <p className="text-sm font-medium text-sky-700 mb-3">
                     产品与用户体验设计师
@@ -254,14 +254,14 @@ function AboutPage() {
               <div className="group block bg-white/80 backdrop-blur-md rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 <div className="relative">
                   <img
-                    src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=1974&auto=format&fit=crop"
+                    src="/images/people4.webp"
                     alt="团队成员照片"
                     className="w-full h-80 object-cover object-top transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div className="p-5">
                   <h3 className="text-lg font-bold text-black mb-1 group-hover:text-sky-600 transition-colors">
-                    李俊杰
+                    李老师
                   </h3>
                   <p className="text-sm font-medium text-sky-700 mb-3">
                     软件工程师

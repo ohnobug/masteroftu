@@ -1,19 +1,21 @@
 import json
 import aiohttp
+import schemas
+import database
+import datetime
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import asynccontextmanager
-from fastapi.responses import JSONResponse
-import schemas
+from fastapi.responses import JSONResponse, HTMLResponse
 from SimpleCrypto import SimpleCrypto
 from moodle_api import api_create_users, api_get_autologin_key, api_get_users_by_username
-from database import TurChatSessions, TurChatHistory, TurUsers
-import database
-from sqlalchemy import delete, insert, select
+from database import TurChatSessions, TurChatHistory, TurUsers, TurVerifyCodes
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from utils import get_token, get_userInfo_from_token, password_hash
+from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint
+from io import StringIO
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -102,11 +104,6 @@ app.add_middleware(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-
-# @app.post("/token")
-# async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-#     return {"access_token": "*******************", "token_type": "bearer"}
-
 # 登录
 @app.post("/api/login", response_model=schemas.UserLoginRequestOut)
 async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(database.get_db)):
@@ -118,7 +115,7 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
     userinfo = result.scalar_one_or_none()
 
     if userinfo is None:
-        raise HTTPException(status_code=401, detail="该账号尚未注册")
+        raise HTTPException(status_code=401, detail="手机号未注册")
 
     checkPassword = password_hash(request.password)
     if (checkPassword == userinfo.password_hash):
@@ -159,6 +156,107 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
         code=200,
         message="注册成功"
     )
+
+# 忘记密码
+@app.post("/api/reset_password", response_model=schemas.UserResetPasswordRequestOut, summary="重置密码")
+async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncSession = Depends(database.get_db)):
+    """
+    重置密码
+    """
+    user_exists_stmt = select(TurUsers).where(TurUsers.phone_number == request.phone_number)
+    result = await db.execute(user_exists_stmt)
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="手机号未注册")
+
+
+    update_stmt = update(TurUsers).where(
+        TurUsers.phone_number == request.phone_number
+    ).values(
+        password_hash=password_hash(request.new_password)
+    )
+
+    result = await db.execute(update_stmt)
+    await db.commit()
+
+    return schemas.UserResetPasswordRequestOut(
+        code=200,
+        message="重置密码成功"
+    )
+
+# 获取手机验证码
+@app.post("/api/get_verify_code", response_model=schemas.UserGetVerifyCodeRequestOut, summary="获取验证码")
+async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: AsyncSession = Depends(database.get_db)):
+    # ------------------------------------------------------------------------
+    # 不管用没用60秒内不能重复获取验证码
+    select_stmt = select(
+        TurVerifyCodes
+    ).where(
+        TurVerifyCodes.phone_number == request.phone_number,
+        TurVerifyCodes.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD,
+    ).order_by(
+        TurVerifyCodes.id.desc()
+    ).limit(1)
+    data = await db.execute(select_stmt)
+    lastVerifyCode = data.first()
+
+    if lastVerifyCode is not None:
+        if lastVerifyCode[0].created_at > datetime.datetime.now() - datetime.timedelta(seconds=5):
+            print("-" * 50)
+            print(lastVerifyCode[0].created_at)
+            print(datetime.datetime.now() - datetime.timedelta(seconds=5))
+            print("-" * 50)
+            raise HTTPException(status_code=429, detail="60秒内不允许重复获取验证码")
+    # ------------------------------------------------------------------------
+    
+    code = generate_numeric_code_randint()
+    insert_stmt = insert(TurVerifyCodes).values(
+        phone_number=request.phone_number,
+        code=code,
+        purpose=request.purpose,
+        is_used=False
+    )
+    result = await db.execute(insert_stmt)
+    await db.commit()
+
+    return schemas.UserGetVerifyCodeRequestOut(
+        code=200,
+        message="获取验证码成功"
+    )
+
+# 获取手机验证码列表(测试用)
+@app.get("/api/get_verify_code_list", response_class=HTMLResponse, summary="获取验证码列表")
+async def get_verify_code_list(db: AsyncSession = Depends(database.get_db)):
+    # ------------------------------------------------------------------------
+    # 不管用没用60秒内不能重复获取验证码
+    select_stmt = select(TurVerifyCodes).order_by(TurVerifyCodes.id.desc())
+    data = (await db.scalars(select_stmt)).all()
+    # ------------------------------------------------------------------------
+
+    s = StringIO()
+
+    s.write('<table style="border-collapse: collapse; width: 500px;">')
+    s.write('<thead><tr>')
+
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">电话</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">验证码</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">日期</th>')
+    s.write('</tr></thead>')
+    s.write('<tbody>')
+
+    for item in data:
+        s.write('<tr>')
+        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.phone_number}</td>')
+        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.code}</td>')
+        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.created_at}</td>')
+        s.write('</tr>')
+
+    s.write("</tbody>")
+    s.write("</table>")
+    content = s.getvalue()
+    s.close()
+
+    return content
 
 
 # 获取用户信息
