@@ -179,7 +179,7 @@ function ChatPage() {
   const connectWs = () => {
     socket.current = io(import.meta.env.VITE_WS_BASE_URL, {
       reconnectionDelayMax: 10000,
-      path: '/wschat/',
+      // path: '/',
       extraHeaders: {
         authorization: `bearer ` + localStorage.getItem("token"),
       },
