@@ -70,9 +70,9 @@ services:
       - DB_PORT=3306
       - DB_HOST=mariadb
       - DB_NAME=tur
-      - LLM_API_KEY=sk-jwcnjpikvwlvkqaodhmtqallesmqoxakvfpigazqdjfqkyxo
-      - LLM_BASE_URL=https://api.siliconflow.cn/v1
-      - LLM_MODEL_NAME=Qwen/Qwen3-32B
+      - LLM_API_KEY=ollama
+      - LLM_BASE_URL=http://192.168.0.5:11434/v1
+      - LLM_MODEL_NAME=qwen2.5
     restart: unless-stopped
     ports:
       - "5001:5000"
@@ -85,7 +85,7 @@ services:
   nginx:
     build:
       context: ./nginx
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile05
     ports:
       - "80:80"
       - "443:443"

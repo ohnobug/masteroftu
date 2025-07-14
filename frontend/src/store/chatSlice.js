@@ -21,6 +21,7 @@ export const chatSlice = createSlice({
         setChatMessage: (state, action) => {
             const chat_session_id = action.payload.chat_session_id;
             const messages = action.payload.messages;
+
             state.chatSessions[chat_session_id].messages = messages;
         },
         // 设置token到消息

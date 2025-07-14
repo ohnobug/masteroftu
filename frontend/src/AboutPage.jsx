@@ -20,7 +20,7 @@ function AboutPage() {
               连接知识与未来
             </h1>
             <p className="mt-6 max-w-3xl mx-auto text-lg text-gray-700">
-              我们是图克教育，一个充满激情与创意的团队。我们致力于打破传统教育的壁垒，通过科技与创新的力量，让每一位学习者都能享受到高质量、个性化、且触手可及的在线学习体验。
+              我们是智能客服，一个充满激情与创意的团队。我们致力于打破传统教育的壁垒，通过科技与创新的力量，让每一位学习者都能享受到高质量、个性化、且触手可及的在线学习体验。
             </p>
           </section>
 
@@ -125,7 +125,7 @@ function AboutPage() {
                     2023年 - 梦想起航
                   </h3>
                   <p className="text-sm leading-snug tracking-wide text-gray-600">
-                    几位对教育充满热忱的伙伴一拍即合，图克教育的雏形诞生，致力于为K12阶段提供有趣的编程启蒙课程。
+                    几位对教育充满热忱的伙伴一拍即合，智能客服的雏形诞生，致力于为K12阶段提供有趣的编程启蒙课程。
                   </p>
                 </div>
               </div>
@@ -142,7 +142,7 @@ function AboutPage() {
                     2024年 - 平台上线
                   </h3>
                   <p className="text-sm leading-snug tracking-wide text-gray-600">
-                    图克教育平台 (learn.turcar.net.cn)
+                    智能客服平台 (learn.turcar.net.cn)
                     正式上线，整合了从小学到大学的多元化课程，注册用户突破1万。
                   </p>
                 </div>

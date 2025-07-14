@@ -76,6 +76,7 @@ function ChatPage() {
     await fetchChatHistory(sessionId);
   };
 
+  // 获取会话列表
   const fetchSession = async () => {
     const data = await APIChatSessions();
 
@@ -88,8 +89,11 @@ function ChatPage() {
     if (Object.keys(data.data).length == 0) {
       dispatch(setCurrentChatId(-1));
     }
+
+    return data.data;
   };
 
+  // 获取会话历史聊天
   const fetchChatHistory = async (id) => {
     const data = await APIChatHistory({
       chat_session_id: id,
@@ -106,8 +110,11 @@ function ChatPage() {
         messages: data.data,
       })
     );
+
+    return data.data;
   };
 
+  // 删除会话
   const fetchDelSession = async (id) => {
     const data = await APIChatDelMessage({
       chat_session_id: id,
@@ -118,24 +125,45 @@ function ChatPage() {
       return;
     }
 
-    if (id == currentChatId) {
-      let sortSession = Object.keys(chatSessions).sort((a, b) => b - a);
-      let currentIndex = sortSession.findIndex((item) => item == id);
+    // 删除会话
+    const entries = Object.entries(chatSessions);
+    const filteredEntries = entries.filter(([key, value]) => {
+      return key != id;
+    })
+    const finishedFilteredEntries = Object.fromEntries(filteredEntries)
+    dispatch(setChatSessions(finishedFilteredEntries));
 
+    let sortSession = Object.keys(finishedFilteredEntries).sort((a, b) => b - a);
+    const chatLen = sortSession.length;
+
+    // 如果剩下一个，那么这一个就是被选
+    if (chatLen == 1) {
+      await fetchChatHistory(sortSession[0]);
+      dispatch(setCurrentChatId(sortSession[0]));
+      return;
+    } else if (chatLen == 0) {
+      // 如果不剩会话，就切换到大屏
+      dispatch(setCurrentChatId(-1));
+      return;
+    }
+
+    // 如果删除的是当前会话，那么切换到下一个会话
+    if (id == currentChatId) {
+      let currentIndex = sortSession.findIndex((item) => item == id);
       let nextId = sortSession[currentIndex + 1];
 
       if (nextId) {
         dispatch(setCurrentChatId(nextId));
+        await fetchChatHistory(nextId);
       } else {
-        dispatch(
-          setCurrentChatId(sortSession.length != 0 ? sortSession[0] : -1)
-        );
+        dispatch(setCurrentChatId(sortSession[0]));
+        await fetchChatHistory(sortSession[0]);
       }
     }
+  }
 
-    await fetchSession();
-  };
 
+  // 创建新会话
   const fetchNewSession = async (text) => {
     // 新建会话
     const data1 = await APIChatNewSession({
@@ -179,7 +207,7 @@ function ChatPage() {
   const connectWs = () => {
     socket.current = io(import.meta.env.VITE_WS_BASE_URL, {
       reconnectionDelayMax: 10000,
-      // path: '/',
+      // path: '/wschat/',
       extraHeaders: {
         authorization: `bearer ` + localStorage.getItem("token"),
       },
@@ -205,6 +233,7 @@ function ChatPage() {
     });
   };
 
+  // 得到用户信息
   const fetchUserInfo = async () => {
     const data = await APIUserInfo().catch((error) => {
       navigate("/login");
@@ -295,11 +324,10 @@ function ChatPage() {
                 .map((session) => (
                   <li
                     key={session.id}
-                    className={`cursor-pointer p-2 rounded-md mb-2 transition-colors flex justify-between ${
-                      currentChatId == session.id
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 hover:bg-gray-200 text-black"
-                    }`}
+                    className={`cursor-pointer p-2 rounded-md mb-2 transition-colors flex justify-between ${currentChatId == session.id
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 hover:bg-gray-200 text-black"
+                      }`}
                     onClick={() => handleSessionClick(session.id)}
                   >
                     <div
@@ -321,6 +349,7 @@ function ChatPage() {
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
+                        // 删除会话
                         fetchDelSession(session.id);
                       }}
                     >
@@ -404,30 +433,28 @@ function ChatPage() {
               {/* 使用 flex-col-reverse 让最新的消息在底部，滚动向上 */}
               {chatSessions[currentChatId]?.messages
                 ? Object.values(chatSessions[currentChatId].messages)
-                    .sort((a, b) => b.id - a.id)
-                    .map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex mb-4 ${
-                          message.sender === "user"
-                            ? "justify-end"
-                            : "justify-start"
+                  .sort((a, b) => b.id - a.id)
+                  .map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex mb-4 ${message.sender === "user"
+                        ? "justify-end"
+                        : "justify-start"
                         }`}
-                      >
-                        <div
-                          className={`max-w-[70%] p-3 rounded-lg ${
-                            message.sender === "user"
-                              ? "bg-blue-500 text-white rounded-br-none"
-                              : "bg-gray-200 text-black rounded-bl-none"
+                    >
+                      <div
+                        className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
+                          ? "bg-blue-500 text-white rounded-br-none"
+                          : "bg-gray-200 text-black rounded-bl-none"
                           }`}
-                          dangerouslySetInnerHTML={{
-                            __html: message.text
-                              ? md.current.render(message.text)
-                              : "",
-                          }}
-                        ></div>
-                      </div>
-                    ))
+                        dangerouslySetInnerHTML={{
+                          __html: message.text
+                            ? md.current.render(message.text)
+                            : "",
+                        }}
+                      ></div>
+                    </div>
+                  ))
                 : null}
               {/* Spacer to prevent content from hiding under the input bar */}
               <div className="pb-20"></div> {/* Adjust padding as needed */}
