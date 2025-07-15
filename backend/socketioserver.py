@@ -86,58 +86,47 @@ async def handle_shutdown():
 
 class WschatNamespace(socketio.AsyncNamespace):
     async def on_connect(self, sid, environ):
-
         # print("\n" * 30)
         # print("❤️" * 30)
-        
         # print(f"Client connected: {sid}")
-
         # print("--- Request Headers and relevant environ info ---")
 
-        # 字典用于存储提取的头信息
-        headers = {}
+        # # 字典用于存储提取的头信息
+        # headers = {}
 
-        # 遍历 environ 字典
-        for key, value in environ.items():
-            # 识别标准的 HTTP 头 (以 'HTTP_' 开头)
-            if key.startswith('HTTP_'):
-                # 转换键名回标准的 HTTP 头格式 (移除 HTTP_, 下划线转破折号, 并格式化大小写)
-                # 例如: 'HTTP_USER_AGENT' -> 'User-Agent'
-                header_name = key[5:].replace('_', '-').title()
-                headers[header_name] = value
-            # 识别 CONTENT_TYPE 和 CONTENT_LENGTH (标准 WSGI 环境变量，代表请求头)
-            elif key in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
-                headers[key.replace('_', '-').title()] = value # 同样格式化键名
+        # # 遍历 environ 字典
+        # for key, value in environ.items():
+        #     # 识别标准的 HTTP 头 (以 'HTTP_' 开头)
+        #     if key.startswith('HTTP_'):
+        #         # 转换键名回标准的 HTTP 头格式 (移除 HTTP_, 下划线转破折号, 并格式化大小写)
+        #         # 例如: 'HTTP_USER_AGENT' -> 'User-Agent'
+        #         header_name = key[5:].replace('_', '-').title()
+        #         headers[header_name] = value
+        #     # 识别 CONTENT_TYPE 和 CONTENT_LENGTH (标准 WSGI 环境变量，代表请求头)
+        #     elif key in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+        #         headers[key.replace('_', '-').title()] = value # 同样格式化键名
 
-        # 打印提取的所有头信息
-        for name, value in headers.items():
-            print(f"  {name}: {value}")
+        # # 打印提取的所有头信息
+        # for name, value in headers.items():
+        #     print(f"  {name}: {value}")
 
-        print("--- Other useful environ info (not strictly headers) ---")
-        # 打印其他常用的非头信息，这些也是请求环境的一部分
-        print(f"  Remote Address: {environ.get('REMOTE_ADDR')}")
-        print(f"  Request Method: {environ.get('REQUEST_METHOD')}")
-        print(f"  Path Info: {environ.get('PATH_INFO')}")
-        print(f"  Query String: {environ.get('QUERY_STRING')}")
-        print(f"  Server Name: {environ.get('SERVER_NAME')}")
-        print(f"  Server Port: {environ.get('SERVER_PORT')}")
-        print(f"  WSGI Version: {environ.get('wsgi.version')}")
-        print(f"  WSGI URL Scheme: {environ.get('wsgi.url_scheme')}")
-        print("❤️" * 30)
-        print("\n" * 30)
+        # print("--- Other useful environ info (not strictly headers) ---")
+        # # 打印其他常用的非头信息，这些也是请求环境的一部分
+        # print(f"  Remote Address: {environ.get('REMOTE_ADDR')}")
+        # print(f"  Request Method: {environ.get('REQUEST_METHOD')}")
+        # print(f"  Path Info: {environ.get('PATH_INFO')}")
+        # print(f"  Query String: {environ.get('QUERY_STRING')}")
+        # print(f"  Server Name: {environ.get('SERVER_NAME')}")
+        # print(f"  Server Port: {environ.get('SERVER_PORT')}")
+        # print(f"  WSGI Version: {environ.get('wsgi.version')}")
+        # print(f"  WSGI URL Scheme: {environ.get('wsgi.url_scheme')}")
+        # print("❤️" * 30)
+        # print("\n" * 30)
         
         
         try:
             bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
-            
-            # print("\n" * 5)
-            # print(environ.get('HTTP_AUTHORIZATION'))
-            # print("\n" * 5)
-            
             userinfo = get_userInfo_from_token(bearer)
-            # print(userinfo)
-            # print("\n" * 5)
-
             async with self.session(sid) as session:
                 session['id'] = userinfo['id']
                 session['phone_number'] = userinfo['phone_number']
@@ -237,7 +226,6 @@ class WschatNamespace(socketio.AsyncNamespace):
                     result = await db.execute(query_stmt)
                     await db.commit()
                 except Exception:
-                    print("莫名断开了")
                     await db.rollback()
                     raise
                 finally:
