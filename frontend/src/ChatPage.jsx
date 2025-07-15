@@ -22,7 +22,7 @@ import "highlight.js/styles/github-dark.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import { TDTextLoading } from "./components/TDTextLoading";
-
+import "./ChatPage.scss"
 
 function ChatPage() {
   const navigate = useNavigate();
@@ -250,6 +250,10 @@ function ChatPage() {
       typographer: true,
       langPrefix: 'language-',
     }).use(MarkdownItHightlightJS);
+
+    md.current.renderer.rules.hr = () => {
+      return `<hr class="sr-only" />`
+    }
 
     md.current.renderer.rules.table_open = () =>
       '<table style="border-collapse: collapse; width: 100%;">';
