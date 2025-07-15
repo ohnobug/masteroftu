@@ -23,6 +23,7 @@ import MarkdownItHightlightJS from "markdown-it-highlightjs";
 import "highlight.js/styles/github-dark.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
+import { TDTextLoading } from "./components/TDTextLoading";
 
 function ChatPage() {
   const navigate = useNavigate();
@@ -442,22 +443,33 @@ function ChatPage() {
                         : "justify-start"
                         }`}
                     >
-                      <div
-                        className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
-                          ? "bg-blue-500 text-white rounded-br-none"
-                          : "bg-gray-200 text-black rounded-bl-none"
-                          }`}
-                        dangerouslySetInnerHTML={{
-                          __html: message.text
-                            ? md.current.render(message.text)
-                            : "",
-                        }}
-                      ></div>
+                      {message.text ? (
+                        <div
+                          className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
+                            ? "bg-blue-500 text-white rounded-br-none"
+                            : "bg-gray-200 text-black rounded-bl-none"
+                            }`}
+                          dangerouslySetInnerHTML={{
+                            __html: message.text
+                              ? md.current.render(message.text)
+                              : "",
+                          }}
+                        ></div>
+                      ) : (
+                        <div
+                          className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
+                            ? "bg-blue-500 text-white rounded-br-none"
+                            : "bg-gray-200 text-black rounded-bl-none"
+                            }`}
+                        >
+                          <TDTextLoading />
+                        </div>
+                      )}
                     </div>
                   ))
                 : null}
-              {/* Spacer to prevent content from hiding under the input bar */}
-              <div className="pb-20"></div> {/* Adjust padding as needed */}
+
+              <div className="pb-20"></div>
             </div>
 
             {/* 聊天输入区域 */}

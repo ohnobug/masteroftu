@@ -1,8 +1,6 @@
 import axios from "axios";
-import { Navigate } from "react-router";
 
-
-
+// 网络请求实例
 const request = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
     withCredentials: true,
@@ -12,22 +10,17 @@ const request = axios.create({
     responseType: "json",
 });
 
-
+// 网络请求封装
 export const getData = (url, data) => {
     let token = localStorage.getItem("token");
 
-    return new Promise((resolve, reject) => {
-        request.post(url, data, {
+    return request.post(
+        url,
+        data,
+        {
             headers: {
                 "Authorization": token ? "bearer " + token : null
             }
-        })
-            .then((response) => {
-                resolve(response.data);
-            }).catch((error) => {
-                reject(error);
-                console.error("Error fetching data:", error);
-            });
-    });
+        }
+    ).then(response => response.data);
 };
-

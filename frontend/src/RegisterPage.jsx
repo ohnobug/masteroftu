@@ -1,20 +1,18 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-
 // 假设这些是你的共享组件，我们继续使用它们保持风格统一
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
-import { APIRegister } from "./network/api";
+import { APIRegister, APIGetVerifyCode } from "./network/api";
 import { useNavigate } from "react-router";
 
 function RegisterPage() {
   // --- State 管理 ---
   // 表单输入
-  const [phoneNumber, setPhoneNumber] = useState("18825130912");
-  const [verificationCode, setVerificationCode] = useState("123456");
-  const [password, setPassword] = useState("Turcarai2025@");
-  const [confirmPassword, setConfirmPassword] = useState("Turcarai2025@"); // 新增：确认密码状态
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // 错误信息
   const [error, setError] = useState(null);
@@ -38,7 +36,7 @@ function RegisterPage() {
     };
   }, []);
 
-  // --- 获取验证码的处理函数 (与忘记密码页面逻辑相同) ---
+  // 获取验证码的处理函数
   const handleGetCode = async () => {
     // 前端手机号校验
     if (!phoneNumber || !/^1[3-9]\d{9}$/.test(phoneNumber)) {
@@ -50,15 +48,12 @@ function RegisterPage() {
     setIsSendingCode(true);
 
     try {
-      // --- API 请求: 发送验证码 ---
-      // 请将 '/api/v1/send-verification-code' 替换成你真实的API接口
-      // 通常注册和忘记密码可以使用同一个发送验证码的接口
-      await axios.post("/api/v1/send-verification-code", {
-        phoneNumber: phoneNumber,
-        type: "register", // 可以选择性地传递一个类型，方便后端区分业务场景
+      const result = await APIGetVerifyCode({
+        phone_number: phoneNumber,
+        purpose: "register"
       });
 
-      // 成功后开始倒计时
+      // 发送成功后开始倒计时
       setIsSendingCode(false);
       setCountdown(60);
       timerRef.current = setInterval(() => {
@@ -72,17 +67,15 @@ function RegisterPage() {
       }, 1000);
     } catch (err) {
       setIsSendingCode(false);
-      console.error("验证码发送失败:", err);
       setError(err.response?.data?.message || "验证码发送失败，请稍后再试。");
     }
   };
 
-  // --- 注册表单提交处理函数 ---
+  // 注册表单提交处理函数
   const handleRegisterSubmit = async (event) => {
     event.preventDefault();
     setError(null);
 
-    // --- 前端校验 ---
     if (password.length < 6) {
       setError("密码长度不能少于6位。");
       return;
@@ -95,31 +88,18 @@ function RegisterPage() {
     setIsLoading(true);
 
     try {
-      // --- API 请求: 提交注册信息 ---
       const response = await APIRegister({
         phone_number: phoneNumber,
-        verification_code: verificationCode,
+        verify_code: verificationCode,
         password: password,
       });
 
-      console.log("注册成功:", response);
       setIsLoading(false);
-
-      if (response.code == 200) {
-        alert("注册成功！即将跳转到登录页面。");
-        navigate("/login")
-      }
+      alert("注册成功！即将跳转到登录页面。");
+      navigate("/login")
     } catch (err) {
       setIsLoading(false);
-      console.error("注册失败:", err);
-      // 设置友好的错误提示
-      if (err.response) {
-        setError(err.response.data.message || "注册失败，请检查信息后重试。");
-      } else if (err.request) {
-        setError("无法连接到服务器，请检查你的网络。");
-      } else {
-        setError("发生未知错误，请稍后再试。");
-      }
+      setError(err?.response?.data?.message || "注册失败，请检查信息后重试。");
     }
   };
 
@@ -198,8 +178,8 @@ function RegisterPage() {
                     {isSendingCode
                       ? "发送中..."
                       : countdown > 0
-                      ? `${countdown}s 后重试`
-                      : "获取验证码"}
+                        ? `${countdown}s 后重试`
+                        : "获取验证码"}
                   </button>
                 </div>
               </div>

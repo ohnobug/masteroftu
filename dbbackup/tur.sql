@@ -25,17 +25,17 @@ DROP TABLE IF EXISTS `tur_chat_history`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tur_chat_history` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `chat_session_id` bigint(20) NOT NULL,
-  `sender` enum('ai','user') DEFAULT NULL,
-  `text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `user_id` int(11) NOT NULL COMMENT '用户ID',
+  `chat_session_id` bigint(20) NOT NULL COMMENT '会话ID',
+  `sender` enum('ai','user') DEFAULT NULL COMMENT '发送者',
+  `text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '文本',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `user_id` (`user_id`) USING BTREE,
   KEY `chat_session_id` (`chat_session_id`) USING BTREE,
-  CONSTRAINT `tur_chat_history_ibfk_1` FOREIGN KEY (`chat_session_id`) REFERENCES `tur_chat_sessions` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=820 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  CONSTRAINT `tur_chat_history_ibfk_1` FOREIGN KEY (`chat_session_id`) REFERENCES `tur_chat_sessions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1107 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,14 +46,20 @@ LOCK TABLES `tur_chat_history` WRITE;
 /*!40000 ALTER TABLE `tur_chat_history` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `tur_chat_history` VALUES
-(812,1,122,'user','可以写篇小说吗？','2025-07-10 22:02:43'),
-(813,1,122,'ai','当然，可以帮您构思并创作一篇短篇小说。下面为您讲述一个关于梦想与抉择的温馨故事：\n\n---\n\n### 题目：梦之桥\n\n小镇上的天气总是那么宜人，仿佛时间在这里静止了一般。在小镇的一隅，住着一个叫林晨的年轻人，他有着一双渴望探求未知的眼睛和一颗对音乐深爱的心。\n\n林晨出生在一个音乐世家，从小就受到了长辈们的悉心教导。但他内心深处却藏着另一个秘密——梦想成为一位旅行家，在世界上的每一个角落留下自己的足迹。每当看到远方的星辰时，他就会默默许愿，希望能与这个世界更加亲近而不是只能通过音符来感受它。\n\n直到有一天，林晨得到了一张特殊的邀请函，邀请他参加在海边举行的一个国际音乐节。虽然机会难得，但考虑到这可能会成为自己离梦想更进一步的关键一步，他在内心反复权衡着选择：旅行家的梦想和对音乐的热爱究竟哪一个更重要？\n\n正当林晨纠结不已之时，他的爷爷从家中走了出来。“你是个勇敢的孩子，”他这样说道，“但不要忘记真正的勇气是要知道自己最珍贵的东西是什么并且勇于为之奋斗。”\n\n这句话仿佛为林晨指明了方向。他理解到，在这段短暂的生活旅程中，有太多值得珍惜的瞬间——与家人朋友共度的美好时光、追求音乐理想的机会以及未知路上等待探索的可能性。\n\n于是，林晨决定带上爷爷赠送的一张珍贵吉他专辑和一把爷爷亲手制作的小提琴踏上了前往海边的旅程。在旅途中，他还结识了许多志同道合的朋友，也听到了更多不同的音乐故事，这些经历进一步丰富了他的心灵世界。\n\n最终，在那个充满浪漫与梦想的地方，林晨不仅实现了自我价值，还找到了属于自己的那份平衡——在探索世界的脚步中不忘记用音符编织出心中那座通往美好之处的梦之桥。而这段旅程也成为了他生命中最宝贵的回忆之一。\n\n---\n\n这是一个简短的故事，希望您喜欢！如果您有特定的主题或情节设定也可以告知我，我可以根据不同要求来创作。','2025-07-10 22:02:52'),
-(814,1,122,'user','可以帮我写个python教程吗？','2025-07-10 22:03:06'),
-(815,1,122,'ai','当然可以！下面是一个面向初学者的Python编程教程，涵盖基础知识和一些实用示例。\n\n### Python 入门教程：从零开始学 Python\n\n#### 目标读者\n- 初级至中级开发者\n- 对编程感兴趣并希望学习 Python 的人群\n\n#### 必备工具\n1. 一个文本编辑器或 IDE（例如 VSCode、PyCharm）\n2. 安装 Python (建议使用最新稳定版本)\n\n#### 第一步：安装 Python\n首先，请访问 [Python 官方网站](https://www.python.org/downloads/) 下载并安装适合您操作系统的最新版 Python。\n\n在命令行中输入 `python --version` （在 Windows 中是 `py --version`）来确认是否已经正确安装。\n\n#### 第二步：创建第一个 Python 程序\n打开您的文本编辑器或 IDE，新建一个文件，并将文件扩展名更改为 `.py`。比如命名为 `hello_world.py`。\n\n输入以下代码：\n```python\n# hello_world.py\n\nprint(\"Hello, World!\")\n```\n\n保存并运行此程序（在命令行中导航到该文件所在目录并在其中输入 `python hello_world.py`）。您会看到输出：`Hello, World!`。\n\n#### 第三步：深入了解 Python 语法\n##### 注释\n- 单行注释使用 `#`\n```python\n# 这是一条单行注释\n```\n- 多行注释可以使用三个连续的引号（单或双）\n```python\n\'\'\'\n这是一个多行注释的例子。\n可以跨越多行，功能与多行字符串相同。\n\'\'\'\n```\n\n##### 变量和数据类型\nPython 是动态类型的语言，您无需提前声明变量的类型。以下是一些基本的数据类型：\n- 整数 (`int`)\n- 浮点数 (`float`)\n- 字符串 (`str`)\n- 布尔值 (`bool`)\n\n```python\nage = 25         # 整型：int\nheight = 180.5   # 浮点型：float\nname = \"Alice\"   # 字符串：str\nis_student = True  # 布尔型：bool\n\nprint(age, height, name, is_student)\n```\n\n##### 控制流语句\n- 条件语句 `if` 和 `else`\n```python\nage = int(input(\"请输入您的年龄: \"))\nif age < 18:\n    print(\"您还是未成年人。\")\nelse:\n    print(\"您已经成年了。\")\n```\n\n- 循环语句 `for` 和 `while`\n```python\n# 遍历一个范围\nfor i in range(5):\n    print(i)\n\n# 使用 while 循环\ncount = 0\nwhile count < 3:\n    print(\"计数: \", count)\n    count += 1\n```\n\n##### 函数定义与调用\n```python\ndef greet(name, age):\n    \"\"\" 这是一个打招呼的函数 \"\"\"\n    return f\"你好，{name}。你今年{age}岁了！\"\n\nprint(greet(\"Tom\", 30))\n```\n\n#### 第四步：使用 Python 标准库和第三方库\nPython 提供了许多内置库来方便开发，例如 `math`、`datetime` 等。\n\n示例：\n```python\nimport math\n\n# 使用数学库中的函数\nprint(math.sqrt(16))  # 输出 4.0\n\nfrom datetime import datetime\n\ncurrent_date = datetime.now()\nprint(\"当前日期和时间:\", current_date)\n```\n\n如果您想要安装第三方库，可以使用 `pip`。例如：\n```sh\npip install requests\n```\n然后在程序中导入并使用它。\n```python\nimport requests\n\nresponse = requests.get(\"https://api.github.com\")\nprint(response.status_code)  # 输出 HTTP 状态码\n```\n\n#### 第五步：进阶学习资源\n- [官方文档](https://docs.python.org/3/)\n- [Real Python](https://realpython.com/)\n- 教程视频如 [YouTube PyBites 学习频道](https://www.youtube.com/c/pybites)\n\n以上内容涵盖了一些基本的 Python 语法和实用示例。希望对您的学习有所帮助！如果您有任何问题或需要进一步的帮助，请随时提问。','2025-07-10 22:03:18'),
-(816,1,123,'user','hello','2025-07-10 22:04:04'),
-(817,1,123,'ai','Hello! How can I assist you today? Feel free to ask me questions or let me know if you need help with anything specifically.','2025-07-10 22:04:05'),
-(818,1,123,'user','可以写篇作文吗？','2025-07-10 22:04:23'),
-(819,1,123,'ai','当然可以！请告诉我你希望这篇作文的主题是什么？比如是关于自然、科技、教育、友情等，还是有特定的要求或要求的字数呢？这样我可以更好地帮助你。如果你没特别的想法，我来给你一个主题：《科技进步与未来生活》。\n\n---\n\n标题：《科技进步与未来生活》\n\n在这个飞速发展的时代里，“科技”一词已经成为我们生活中不可或缺的一部分。它像一股不可阻挡的力量，推动着人类社会不断向前发展。今天，我想探讨一下科技进步对我们的生活方式将产生何种影响，并展望一个美好的未来。\n\n自从工业革命以来，科学技术的进步就一直在塑造着世界。从最初的火车、电话到现在的互联网、电动汽车，每一次技术革新都极大地提高了人们的生活质量。例如，智能手机的发明不仅仅是通讯工具的革新；它改变了人们的购物方式、学习模式乃至整个社会的信息传播速度。这说明，科技进步并非孤立于我们的生活中，而是深深融入了每一个人的日常。\n\n未来，科技的进步将如何重塑人类生活呢？或许可以预见的是，人工智能和机器人技术将进一步普及应用，从而大大提高生产效率与生活质量。想象一下，未来的家庭中，不仅有智能家电帮助我们更好地管理家务，还有陪伴型机器人能够成为我们的朋友；在医疗领域，精准医疗和远程医疗服务的发展让患者无需长途跋涉就能享受到优质治疗……\n\n此外，在教育方面，虚拟现实技术将为学习者提供一个沉浸式的环境，使得知识的获取变得生动而真实。人们不再局限于书本中的知识，而是能够通过视觉、触觉等多重感官体验来深入了解各种现象和理论。\n\n不过值得注意的是，科技进步带来便利的同时也伴随着挑战。如何平衡个人隐私与安全？哪些职业将受到人工智能的影响而被淘汰？这些问题都是我们在享受科技带来的好处时必须考虑清楚的。\n\n总的来说，科技进步无疑是推动社会前进的关键力量之一。面对新的机遇与挑战，人类需要保持开放的心态和前瞻性思维去拥抱它，并积极寻求解决方案来促进和谐发展。只有这样，我们才能共同创造一个更加美好的未来生活。\n\n---\n\n这篇作文围绕“科技进步与未来生活”的主题展开讨论，涵盖科技进步的影响、未来可能的发展方向以及面临的挑战。希望对你有帮助！如果有其他需求或想要调整的方向，请告诉我。','2025-07-10 22:04:29');
+(1093,1,246,'user','你能帮我写一首歌吗？关于霸王别姬的','2025-07-15 05:55:17'),
+(1094,1,246,'ai','当然可以！下面是一首简短的歌词，以霸王别姬的故事为背景，表达了项羽与虞姬间的情感和结局。\n\n【歌名】《临江别》\n\n【副歌】\n在霸王临江的地方，\n红尘中最后一舞尽伤。\n风雪里一曲唱离别章，\n剑影里血染长裳。\n\n【第一节】\n月下你轻抚琴弦，\n“虞兮虞兮，奈若何。”\n你的泪落在琴边，\n眼中尽是无尽思念。\n那日战旗翻飞如海，\n你翩然落马悲歌中。\n\n【副歌】\n在霸王临江的地方，\n红尘中最后一舞尽伤。\n风雪里一曲唱离别章，\n剑影里血染长裳。\n\n【第二节】\n英雄泪眼中刀光，\n“纵使前路千重浪。”\n月色下你轻抚我脸庞，\n却难改这苍茫过往。\n四面楚歌，血泪满场，\n你翩然落马悲歌唱飞荡。\n\n【副歌】\n在霸王临江的地方，\n红尘中最后一舞尽伤。\n风雪里一曲唱离别章，\n剑影里血染长裳。\n\n【桥段】\n江山如画，英雄未老，\n奈何终是两世迢遥。\n那一抹嫣红在时光流转中消逝，\n如今只剩这江水滔滔不绝。\n\n【副歌2】\n在霸王临江的地方，\n独望天边云翻月黄。\n风雪里一曲唱离别章，\n剑影里，爱与死长伴旁。\n\n【尾声】\n那一年花开半夏时分，\n如今你我隔世沉沦。\n纵使长夜漫漫路难寻，\n只愿来生再续今世情深。\n\n请注意，这首歌只是从“霸王别姬”的故事中汲取灵感编写的一首抒情歌曲。希望你喜欢！','2025-07-15 05:55:23'),
+(1095,1,246,'user','hiphop','2025-07-15 05:56:00'),
+(1096,1,246,'ai','当然可以！为了契合《霸王别姬》的故事背景和情感色彩，我们可以创作一首充满力量与情感的Hip-hop风格的歌词。\n\n【歌名】：《永恒之誓》\n\n【第一节】\n大风起兮云飞扬，\n一卷历史在胸膛。\n四面楚歌，剑影闪亮，\n心中有梦，肝胆相向。\n\n你在乌江边挥手别往，\n“虞姬，生如夏花，死如明月光。”\n你的笑映照我心上，\n万军之中，你独美难忘。\n\n【副歌】\n霸王别姬，血染疆场，\n悲壮绝唱，爱与离愁长。\n乌骓马嘶，剑影闪烁，\n你我一诺千金重！\n\n【第二节】\n霸王挥手，江山如画，\n六宫粉黛，终归尘沙。\n虞姬轻柔，泪眼相望，\n“明日黄花，为君再绽放。”\n\n但愿苍天有眼，\n明月依旧照亮那片天地。\n英雄泪湿战袍上，\n你我情深似海长。\n\n【桥段】\n在那临江的夜晚，\n琴弦低鸣，歌泣千行。\n爱与恨交错缠绵，\n你的悲歌未尽，我的梦仍在延续。\n\n【副歌】\n霸王别姬，血染疆场，\n悲壮绝唱，爱与离愁长。\n乌马嘶鸣，剑影闪烁，\n你我一诺千金重！\n\n【尾声】\n江水悠悠，岁月如梭，\n回忆中依稀可辨的你。\n英雄未老，爱意永恒，\n在历史的长河深处，我们永不忘。\n\n希望这段歌词能贴近你的需求。如果有任何调整或修改意见，请随时告诉我！','2025-07-15 05:56:05'),
+(1097,1,246,'user','rapper','2025-07-15 05:56:08'),
+(1098,1,246,'ai','好的，我们将为《霸王别姬》的故事创造一段hip-hop风格的歌词，以rap的形式来表达情感和剧情。以下是创作的一段歌词：\n\n【歌名】：《霸王别姬》\n\n[Bridge & Chorus]\n在乌江之畔，风萧夜静，\n霸王挥剑，别姬轻声。\n霸王豪情万丈，美人柔肠千转，\n在这历史的长卷，爱恨交织难断。\n\n[Verse 1 - Rapper: 正义者]\n四面楚歌响彻天边，\n金戈铁马血如泉。\n你在帷幕后低吟浅唱，\n我手中握剑，豪情难掩。\n\n战场风云变幻无常，\n英雄泪湿衣裳上。\n虞姬柔情似水长流，\n誓与君王生死相望。\n\n[Verse 2 - Rapper: 爱人]\n四面楚歌中，你独步辉煌，\n红颜一笑，倾覆江山。\n那日月下，琴声悠扬，\n我独守那份承诺绵延。\n\n乌江边挥手一别，\n泪眼含烟雾弥漫。\n纵使刀光剑影间，\n爱恋如铁血满腔。\n\n[Chorus]\n霸王别姬，英雄悲歌奏响，\n虞姬轻盈，泪湿长裳。\n乌马嘶鸣剑光闪烁，\n誓言刻骨，难舍难忘。\n\n[Bridge & Chorus (重复)]\n在乌江之畔，风萧夜静，\n霸王挥剑，别姬轻声。\n霸王豪情万丈，美人柔肠千转，\n在这历史的长卷，爱恨交织难断。\n\n[Verse 3 - Rapper: 正义者]\n四面楚歌中你英姿不减，\n誓死守卫这份人间绝恋。\n刀光剑影下，你一舞倾城，\n愿与君王共赴黄泉路长。\n\n乌江边别离依依不舍，\n但愿来世再续前缘。\n英雄泪湿衣裳上，\n爱恋如铁血满腔。\n\n[Outro - Rapper: 爱人]\n历史的长河悠悠流去，\n你我情深似海长。\n霸王别姬，永不止息，\n在心中那份永恒之誓，铭记在心。\n\n希望这段歌词能够符合你的要求。如果有任何调整或修改意见，请随时告诉我！','2025-07-15 05:56:14'),
+(1099,1,246,'user','good','2025-07-15 05:56:17'),
+(1100,1,246,'ai','太好了！很高兴你喜欢这首《霸王别姬》的Hip-hop风格歌词。如果你有任何其他需求或者想要进一步完善和修改的地方，欢迎随时告诉我！\n\n如果需要制作音乐、寻找合作者或者是进行其他的创作活动，我也很乐意提供帮助。祝你的创作顺利！\n\n如果有更多的内容或问题，我们继续交流吧！','2025-07-15 05:56:18'),
+(1101,1,246,'user','sdf','2025-07-15 05:56:18'),
+(1102,1,246,'ai','看起来你输入了一些随机的字符。如果你有任何具体的问题或者需要进一步的帮助，请告诉我！我可以继续帮你在写歌词、提供信息或者其他方面的支持。','2025-07-15 05:56:19'),
+(1103,1,246,'user','写一篇作文','2025-07-15 05:56:26'),
+(1104,1,246,'ai','当然可以！请告诉我你想要写作的主题或内容是什么？例如，你是想要写一篇关于《霸王别姬》的故事分析，还是希望探讨项羽和虞姬之间的感情？或者有其他特定的要求或主题吗？\n\n如果没有具体要求，我可以帮你写一篇简短的作文，以《霸王别姬》为主题，探讨这段历史故事及其对现代人的启示。\n\n以下是示例作文：\n\n---\n\n**霸王别姬：一段千古悲歌**\n\n在古代的历史长河中，有许多令人难忘的故事。其中，《霸王别姬》不仅是项羽和虞姬之间的爱情传说，更是中华文化中浓墨重彩的一笔。这篇作文将从故事背景、人物情感以及现代启示三个方面来探讨这一段充满悲剧色彩的英雄爱情。\n\n### 故事背景\n《霸王别姬》源于中国古代历史中的楚汉争霸时期，讲述的是西楚霸王项羽与美人虞姬之间的情感纠葛。秦朝灭亡后，项羽自立为王，统帅八千江东子弟起义抗秦，战胜了强大的秦国军队，自封为西楚霸王。然而，在楚汉争霸中失败，英雄末路时被迫自刎乌江。而他的心爱之人虞姬也投缳而死，以身殉情。\n\n### 人物情感\n项羽和虞姬之间的感情纯真而又深沉。项羽作为一代枭雄，拥有无尽的武勇和威势，但在面对爱情时却显得如此柔弱。他在战场上的英勇无敌以及战场上为他人考虑的豪迈气概，与他对待虞姬的情感形成了鲜明对比。虞姬则是一曲绝美的女声，她的美貌与才华更增添了几分凄美。她不仅为项羽而生，也为他而死，以一腔柔情见证了英雄末路时的悲凉。\n\n### 现代启示\n《霸王别姬》虽然发生在古代，但在现代同样具有深刻的启示意义。首先，它提醒我们爱情的力量是无穷的。无论是在爱情中付出多少，都能得到无尽的回报。其次，英雄主义不仅仅是战场上的英勇，更在于人性中的真善美。“生于繁华落于尘埃”的悲凉感告诉我们要珍惜当下，勇敢面对生活的挑战和困难。最后，这段历史故事也启示我们，在面对逆境时要保持坚韧不屈的精神，即便在最艰难的时刻也要坚守自己的信念。\n\n### 结语\n《霸王别姬》是中华民族悠久历史文化中的一个重要组成部分。通过这个故事，我们可以更深入地理解古代英雄与美女之间的感情纠葛以及他们所经历的悲剧命运。同时，这份爱情的美好与牺牲也让我们反思关于勇气、牺牲和个人价值的问题。在今天快节奏的社会中，这些古典文化的智慧依然能给我们带来深刻的影响和启示。\n\n---\n\n希望这篇作文能够满足你的需求。如果有其他具体的要求或者需要进一步修改，请告诉我！','2025-07-15 05:56:37'),
+(1105,1,246,'user','写一篇作文','2025-07-15 05:56:28'),
+(1106,1,246,'ai','好的，我们来写一篇以《霸王别姬》为背景的作文。这篇作文旨在通过描述这一段历史故事，表达英雄与美人的悲壮情感以及他们对爱情的理解。\n\n【题目】：《虞姬泪，霸王剑》\n\n【正文】\n\n在中国悠久的历史长河中，有一段凄美的传奇——“霸王别姬”。这段故事不仅在中国文学和戏剧中留下了浓墨重彩的一笔，更是成为了无数人心中的经典。它讲述的是项羽与虞姬之间深深的爱恋与无奈的结局。\n\n在那个兵荒马乱的时代，项羽凭借勇力和谋略成为一方诸侯的领袖。他在楚汉争霸中虽无敌于天下，但在心中却始终难以割舍的，是那一位绝世佳人——虞姬。虞姬不仅美丽动人，还是一位才情出众的歌女，在项羽的心中占有不可替代的地位。\n\n在垓下之战前夕，四面楚歌，项羽率领数十万大军陷入重重包围之中。夜晚，他与虞姬共度最后一次相聚的时间。月光如水，琴声悠扬，项羽不禁感慨万千。他回首往事，感叹历史的无常与爱情的脆弱。于是，便有了著名的那句“霸王别姬”的故事。\n\n项羽悲壮地说：“虞姬，生如夏花，死如秋叶。”这句话既是对虞姬一生短暂但却绚烂的生命的赞美，也是对自己命运的一种沉重诉说。面对生死存亡之际的选择，项羽选择了保护爱人的荣誉和尊严，不愿让爱人落入敌手。\n\n虞姬深情地望着项羽的眼睛，轻轻地说：“君王天下，妾身何求？愿以一舞换君安。”在琴声的伴奏下，她缓缓起舞，并用生命唱响了《霸王别姬》的传奇——那首让人既感伤又壮烈的歌。她的舞蹈如同飞鸿影里，轻盈而决绝。\n\n“虞兮虞兮奈若何，不知天亡我，项羽啊！”最后一曲结束，虞姬静静地倒下了。她以生命为代价，换来了项羽的尊严和安定。然而，这一幕也深刻地暴露了历史的真实：在这变幻莫测的社会里，英雄与美人、权力与爱情之间都充满了无奈与牺牲。\n\n尽管最终项羽在乌江边自刎谢罪天命，但他的勇气和虞姬的忠诚永远被传颂。这种悲壮的情感让人感叹：真正的爱不仅仅是相伴左右，更是在生命的重要时刻给予支持和勇气。即使在最黑暗的时刻，爱也可以成为指引前行的力量。\n\n【结语】\n\n《霸王别姬》不仅是一段历史故事，更是对真挚爱情与英雄主义的一次深刻反思。它提醒着我们，在面对抉择时，要勇敢地去追求自己的理想，并且珍惜当下拥有的一切。正是这种对人性深层次的理解和感悟，使得这段悲壮的情缘成为了传世佳话。\n\n希望这篇作文能够满足你的需求！如果有任何修改意见或者需要进一步的内容，请随时告诉我。','2025-07-15 05:56:39');
 /*!40000 ALTER TABLE `tur_chat_history` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -66,13 +72,14 @@ DROP TABLE IF EXISTS `tur_chat_sessions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tur_chat_sessions` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `user_id` int(11) NOT NULL COMMENT '用户ID',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '会话标题（通常第一句话）',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
-  KEY `user_id` (`user_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=124 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `user_id` (`user_id`) USING BTREE,
+  CONSTRAINT `tur_chat_sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `tur_users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=247 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -83,37 +90,8 @@ LOCK TABLES `tur_chat_sessions` WRITE;
 /*!40000 ALTER TABLE `tur_chat_sessions` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `tur_chat_sessions` VALUES
-(122,1,'可以写篇小说吗？','2025-07-10 22:02:43'),
-(123,1,'hello','2025-07-10 22:04:04');
+(246,1,'你能帮我写一首歌吗？关于霸王别姬的','2025-07-15 05:55:17');
 /*!40000 ALTER TABLE `tur_chat_sessions` ENABLE KEYS */;
-UNLOCK TABLES;
-commit;
-
---
--- Table structure for table `tur_sms_logs`
---
-
-DROP TABLE IF EXISTS `tur_sms_logs`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `tur_sms_logs` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `phone_number` varchar(20) NOT NULL,
-  `content` text NOT NULL,
-  `status` varchar(20) NOT NULL,
-  `sent_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `tur_sms_logs`
---
-
-LOCK TABLES `tur_sms_logs` WRITE;
-/*!40000 ALTER TABLE `tur_sms_logs` DISABLE KEYS */;
-set autocommit=0;
-/*!40000 ALTER TABLE `tur_sms_logs` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
 
@@ -125,13 +103,13 @@ DROP TABLE IF EXISTS `tur_users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tur_users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `phone_number` varchar(20) NOT NULL,
-  `password_hash` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `phone_number` varchar(20) NOT NULL COMMENT '手机号码',
+  `password_hash` varchar(255) NOT NULL COMMENT '密码哈希',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `phone_number` (`phone_number`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -142,40 +120,44 @@ LOCK TABLES `tur_users` WRITE;
 /*!40000 ALTER TABLE `tur_users` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `tur_users` VALUES
-(1,'18825130917','71b9b90bafe13be75924c7b06733f90919b2226f663935322b3882dfb8f4e500','2025-07-10 20:19:58'),
+(1,'18825130917','bcb15f821479b4d5772bd0ca866c00ad5f926e3580720659cc80d39c9d09802a','2025-07-10 20:19:58'),
 (4,'188251309172','71b9b90bafe13be75924c7b06733f90919b2226f663935322b3882dfb8f4e500','2025-07-10 20:21:55'),
 (5,'18825130916','71b9b90bafe13be75924c7b06733f90919b2226f663935322b3882dfb8f4e500','2025-07-10 20:22:28'),
-(6,'18825130918','71b9b90bafe13be75924c7b06733f90919b2226f663935322b3882dfb8f4e500','2025-07-11 06:10:37');
+(6,'18825130918','71b9b90bafe13be75924c7b06733f90919b2226f663935322b3882dfb8f4e500','2025-07-11 06:10:37'),
+(7,'18825130999','8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92','2025-07-15 06:08:04'),
+(8,'18825130919','8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92','2025-07-15 06:48:55'),
+(9,'18825130920','8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92','2025-07-15 07:03:42');
 /*!40000 ALTER TABLE `tur_users` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
 
 --
--- Table structure for table `tur_verification_codes`
+-- Table structure for table `tur_verify_codes`
 --
 
-DROP TABLE IF EXISTS `tur_verification_codes`;
+DROP TABLE IF EXISTS `tur_verify_codes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `tur_verification_codes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `phone_number` varchar(20) NOT NULL,
-  `code` varchar(10) NOT NULL,
-  `purpose` varchar(50) NOT NULL,
-  `is_used` tinyint(1) DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+CREATE TABLE `tur_verify_codes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `phone_number` char(20) NOT NULL COMMENT '手机号',
+  `code` varchar(10) NOT NULL COMMENT '验证码',
+  `purpose` varchar(50) NOT NULL COMMENT '用途',
+  `is_used` tinyint(1) DEFAULT 0 COMMENT '是否已使用',
+  `used_at` timestamp NOT NULL COMMENT '使用时间',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `tur_verification_codes`
+-- Dumping data for table `tur_verify_codes`
 --
 
-LOCK TABLES `tur_verification_codes` WRITE;
-/*!40000 ALTER TABLE `tur_verification_codes` DISABLE KEYS */;
+LOCK TABLES `tur_verify_codes` WRITE;
+/*!40000 ALTER TABLE `tur_verify_codes` DISABLE KEYS */;
 set autocommit=0;
-/*!40000 ALTER TABLE `tur_verification_codes` ENABLE KEYS */;
+/*!40000 ALTER TABLE `tur_verify_codes` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -188,4 +170,4 @@ commit;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-07-11  7:13:49
+-- Dump completed on 2025-07-15  7:04:30

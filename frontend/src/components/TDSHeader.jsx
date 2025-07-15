@@ -1,20 +1,26 @@
 import { useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setUserinfo } from "../store/userSlice";
 
 const TDSHeader = () => {
   const location = useLocation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.scrollTop = 0;
     document.documentElement.scrollTop = 0;
   }, [location]);
 
+
   const logout = () => {
     dispatch(setUserinfo(null));
     localStorage.removeItem("token");
+
+    if (['/chat'].includes(location.pathname)) {
+      navigate('/');
+    }
   };
 
   const inactive = useRef(
@@ -145,7 +151,7 @@ const TDSHeader = () => {
               }}
             >
               <img
-                src="https://img2.baidu.com/it/u=1137101923,166953968&fm=253&app=138&f=JPEG?w=500&h=500"
+                src="/images/user.png"
                 alt="User profile"
                 className="w-9 h-9 rounded-full"
               />

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class UserRegisterRequestIn(BaseModel):
     phone_number: str = Field(...)
     password: str = Field(...)
-    verification_code: str = Field(...)
+    verify_code: str = Field(...)
 
 class UserRegisterRequestOut(BaseResponse):
     pass

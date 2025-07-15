@@ -65,6 +65,5 @@ class TurVerifyCodes(Base):
     code = Column(String(10), nullable=False)
     purpose = Column(String(50), nullable=False)
     is_used = Column(Boolean, default=False)
+    used_at = Column(TIMESTAMP, default=0)
     created_at = Column(TIMESTAMP, server_default=func.now())
-
-

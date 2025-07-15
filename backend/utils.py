@@ -11,8 +11,10 @@ from sqlalchemy import select, insert, update, func
 from SimpleCrypto import SimpleCrypto
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 import database
-from database import TurUsers
+from database import TurUsers, TurVerifyCodes
 import random
+from fastapi import HTTPException
+import schemas
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -71,10 +73,42 @@ def generate_numeric_code_randint():
     code = random.randint(100000, 999999)
     return code
 
+# 调试打印专用
 def p(stri: str):
     print("\n" * 2)
     print("❤️" * 30)
     print(stri)
     print("❤️" * 30)
     print("\n" * 2)
-    
+
+# 检查验证码
+async def check_verify_code(db, phone_number: str, code: str, purpose: schemas.UserGetVerifyCodePurposeEnum):
+    # 检查验证码
+    select_stmt = select(
+        TurVerifyCodes
+    ).where(
+        TurVerifyCodes.phone_number == phone_number,
+        TurVerifyCodes.purpose == purpose,
+        TurVerifyCodes.is_used == False,
+        TurVerifyCodes.code == code
+    ).order_by(
+        TurVerifyCodes.id.desc()
+    ).limit(1)
+    lastVerifyCode = (await db.execute(select_stmt)).scalar_one_or_none()
+
+    if lastVerifyCode is None:
+        raise HTTPException(status_code=429, detail="请先获取验证码")
+
+    if lastVerifyCode.created_at < datetime.now() - timedelta(seconds=60):
+        raise HTTPException(status_code=429, detail="验证码已过期")
+
+    # 更新为已使用
+    update_stmt = update(TurVerifyCodes).where(
+        TurVerifyCodes.id == lastVerifyCode.id
+    ).values(
+        used_at=datetime.now(),
+        is_used=True
+    )
+
+    result = await db.execute(update_stmt)
+    await db.commit()

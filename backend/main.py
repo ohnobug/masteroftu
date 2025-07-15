@@ -14,26 +14,22 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint, p
+from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint, p, check_verify_code
 from io import StringIO
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动阶段 (在 yield 之前)
     print("Application startup...")
-
-    yield
-    
+    yield    
     print("Application shutdown...")
-
     # 释放数据库 Engine 和连接池
     if database.engine:
         await database.engine.dispose()
     print("Database engine disposed")
 
 
-# app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
-app = FastAPI(title="FastAPI SMS and Auth Demo", lifespan=lifespan)
+app = FastAPI(title="FastAPI新接口", lifespan=lifespan)
 
 
 class UnicornException(Exception):
@@ -57,34 +53,25 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     自定义 HTTPException 处理器。
      khusus 针对 401 Unauthorized 错误返回统一的 JSON 格式响应。
     """
-    print(f"Caught HTTPException with status code: {exc.status_code} and detail: {exc.detail}") # Optional debug print
+    print(f"Caught HTTPException with status code: {exc.status_code} and detail: {exc.detail}")
 
-    if exc.status_code == status.HTTP_401_UNAUTHORIZED:
-        # 这会捕获：
-        # 1. oauth2_scheme 因为缺少 Header 抛出的默认 401
-        # 2. get_current_user 因为令牌无效等原因抛出的 401
-        # 您可以根据需要进一步检查 exc.detail 来区分不同的 401 原因，
-        # 但通常提供一个通用的“认证失败”消息就足够了，以免泄露过多信息。
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
-                "code": 401,
-                "message": exc.detail
-            }
-        )
-    else:
-        # 对于其他 HTTPException 状态码 (如 400, 404, 422, 500)，
-        # 可以选择：
-        # A) 重新抛出异常，让 FastAPI 的默认 HTTPException 处理器处理
-        # raise exc
-        # B) 返回一个基于原始异常信息的 JSON 响应 (如下所示)
+
+    if exc.detail == "Not authenticated":
         return JSONResponse(
             status_code=exc.status_code,
             content={
-                 "code": exc.status_code,
-                 "message": exc.detail
+                "code": 401,
+                "message": "用户尚未登录"
             }
         )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+                "code": exc.status_code,
+                "message": exc.detail
+        }
+    )
 
 
 origins = [
@@ -123,7 +110,7 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
         
         return schemas.UserLoginRequestOut(
             code=200,
-            message="Success",
+            message="success",
             data=schemas.UserLoginToken(token=token)
         )
     else:
@@ -135,13 +122,18 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
     """
     用户注册
     """
+    # 检测用户是否注册
     query_stmt = select(TurUsers).where(
         TurUsers.phone_number == request.phone_number
     )
-    result = await db.execute(query_stmt)
-    if result.fetchone() is not None:
+    result = await db.scalar(query_stmt)
+    if result is not None:
         raise HTTPException(status_code=409, detail="手机号已被注册")
 
+    # 检测验证码
+    await check_verify_code(db, request.phone_number, request.verify_code, schemas.UserGetVerifyCodePurposeEnum.REGISTER)
+
+    # 注册用户
     passwordh = password_hash(request.password)
     insert_stmt = insert(TurUsers).values(
         phone_number=request.phone_number,
@@ -149,7 +141,7 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
     )
 
     result = await db.execute(insert_stmt)
-    result.inserted_primary_key[0]
+    # result.inserted_primary_key[0]
     await db.commit()
 
     return schemas.UserRegisterRequestOut(
@@ -170,34 +162,10 @@ async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncS
     if user is None:
         raise HTTPException(status_code=404, detail="手机号未注册")
 
-    # 检查验证码
-    select_stmt = select(
-        TurVerifyCodes
-    ).where(
-        TurVerifyCodes.phone_number == request.phone_number,
-        TurVerifyCodes.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD,
-        TurVerifyCodes.is_used == False,
-        TurVerifyCodes.code == request.verify_code
-    ).order_by(
-        TurVerifyCodes.id.desc()
-    ).limit(1)
-    lastVerifyCode = (await db.execute(select_stmt)).scalar_one_or_none()
+    # 检测验证码
+    await check_verify_code(db, request.phone_number, request.verify_code, schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD)
 
-    if lastVerifyCode is None:
-        raise HTTPException(status_code=429, detail="请先获取验证码")
-
-    if lastVerifyCode.created_at < datetime.datetime.now() - datetime.timedelta(seconds=60):
-        raise HTTPException(status_code=429, detail="验证码已过期")
-
-    # 更新为已使用
-    update_stmt = update(TurVerifyCodes).where(
-        TurVerifyCodes.id == lastVerifyCode.id
-    ).values(
-        is_used=True
-    )
-    result = await db.execute(update_stmt)
-    await db.commit()
-
+    # 重置密码
     update_stmt = update(TurUsers).where(
         TurUsers.phone_number == request.phone_number
     ).values(
@@ -216,24 +184,28 @@ async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncS
 @app.post("/api/get_verify_code", response_model=schemas.UserGetVerifyCodeRequestOut, summary="获取验证码")
 async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: AsyncSession = Depends(database.get_db)):
     # ------------------------------------------------------------------------
-    # 不管用没用60秒内不能重复获取验证码
+    # 60秒内同一手机号不能重复获取验证码
     select_stmt = select(
         TurVerifyCodes
     ).where(
-        TurVerifyCodes.phone_number == request.phone_number,
-        TurVerifyCodes.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD,
+        TurVerifyCodes.phone_number == request.phone_number
     ).order_by(
         TurVerifyCodes.id.desc()
     ).limit(1)
     lastVerifyCode = (await db.execute(select_stmt)).scalar()
 
     if lastVerifyCode is not None:
-        p(lastVerifyCode.created_at)
-        p(datetime.datetime.now() - datetime.timedelta(seconds=60))
-
         if lastVerifyCode.created_at > datetime.datetime.now() - datetime.timedelta(seconds=60):
             raise HTTPException(status_code=429, detail="60秒内不允许重复获取验证码")
     # ------------------------------------------------------------------------
+
+    # 查看是否注册
+    if request.purpose == schemas.UserGetVerifyCodePurposeEnum.REGISTER:
+        query_stmt = select(TurUsers).where(TurUsers.phone_number == request.phone_number)
+        userinfo = await db.scalar(query_stmt)
+        if userinfo is not None:
+            raise HTTPException(status_code=409, detail="手机号已被注册")
+
 
     code = generate_numeric_code_randint()
     insert_stmt = insert(TurVerifyCodes).values(
@@ -253,10 +225,8 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
 # 获取手机验证码列表(测试用)
 @app.get("/api/get_verify_code_list", response_class=HTMLResponse, summary="获取验证码列表")
 async def get_verify_code_list(db: AsyncSession = Depends(database.get_db)):
-    # ------------------------------------------------------------------------
     select_stmt = select(TurVerifyCodes).order_by(TurVerifyCodes.id.desc())
     data = (await db.scalars(select_stmt)).all()
-    # ------------------------------------------------------------------------
 
     s = StringIO()
 
@@ -276,13 +246,15 @@ function clearVerifyCodeList() {
 
     s.write(script)
 
-    s.write('<table style="border-collapse: collapse; width: 600px;">')
+    s.write('<table style="border-collapse: collapse; width: 700px;">')
     s.write('<thead><tr>')
 
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">电话</th>')
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">验证码</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">用途</th>')
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">是否已使用</th>')
-    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">日期</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">使用时间</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">创建日期</th>')
     s.write('</tr></thead>')
     s.write('<tbody>')
 
@@ -291,14 +263,16 @@ function clearVerifyCodeList() {
             s.write('<tr>')
             s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.phone_number}</td>')
             s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.code}</td>')
+            s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.purpose}</td>')
             if item.is_used:
                 s.write(f'<td style="border: 1px solid black; padding: 4px;">是</td>')
             else:
                 s.write(f'<td style="border: 1px solid black; padding: 4px;">否</td>')
+            s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.used_at}</td>')
             s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.created_at}</td>')
             s.write('</tr>')
     else:
-        s.write("<tr><td style=\"border: 1px solid black; padding: 4px; text-align: center;\" colspan=\"4\">无数据</td></tr>")
+        s.write("<tr><td style=\"border: 1px solid black; padding: 4px; text-align: center;\" colspan=\"6\">无数据</td></tr>")
 
     s.write("</tbody>")
     s.write("</table>")
@@ -326,8 +300,8 @@ async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Dep
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
-    
+        raise HTTPException(status_code=401, detail="token解析错误")
+
     return schemas.UserInfoRequestOut(
         code=200,
         message="success",
@@ -343,7 +317,7 @@ async def chat_sessions(db: AsyncSession = Depends(database.get_db), token: str 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
+        raise HTTPException(status_code=401, detail="token解析错误")
 
     query_stmt = select(
         TurChatSessions.id,
@@ -364,7 +338,7 @@ async def chat_sessions(db: AsyncSession = Depends(database.get_db), token: str 
         
     return schemas.ChatSessionOut(
             code=200,
-            message="Success",
+            message="success",
             data=output
         )
 
@@ -375,7 +349,7 @@ async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depend
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
+        raise HTTPException(status_code=401, detail="token解析错误")
 
     query_stmt = select(
         TurChatHistory.id, 
@@ -399,7 +373,7 @@ async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depend
 
     return schemas.ChatHistoryOut(
             code=200,
-            message="Success",
+            message="success",
             data=output
         )
 
@@ -410,7 +384,7 @@ async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
+        raise HTTPException(status_code=401, detail="token解析错误")
 
     # 插入会话
     query_stmt = insert(TurChatSessions).values(
@@ -424,7 +398,7 @@ async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = 
 
     return schemas.ChatNewsessionOut(
             code=200,
-            message="Success",
+            message="success",
             data=schemas.ChatNewsession(chat_session_id=chatSessionId)
         )
 
@@ -435,7 +409,7 @@ async def chat_delsession(request: schemas.ChatDelsessionIn, db: AsyncSession = 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
+        raise HTTPException(status_code=401, detail="token解析错误")
 
     # 删除会话
     query_stmt = delete(TurChatSessions).where(
@@ -447,7 +421,7 @@ async def chat_delsession(request: schemas.ChatDelsessionIn, db: AsyncSession = 
 
     return schemas.ChatDelsessionOut(
             code=200,
-            message="Success",
+            message="success",
         )
 
 
@@ -457,7 +431,7 @@ async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = 
     try:
         userinfo = get_userInfo_from_token(token)
     except:
-        HTTPException(status_code=401, detail="用户尚未登录")
+        raise HTTPException(status_code=401, detail="token解析错误")
 
     # 插入历史记录
     query_stmt = insert(TurChatHistory).values(
@@ -485,7 +459,7 @@ async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = 
     
     return schemas.ChatNewmessageOut(
             code=200,
-            message="Success",
+            message="success",
             data=schemas.ChatNewmessage(
                 chat_message_id=chatMessageId,
                 ai_message_id=aiMessageId
