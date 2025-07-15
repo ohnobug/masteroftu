@@ -4,12 +4,14 @@ import { setUserinfo } from "./store/userSlice";
 
 // 获取用户信息
 export const useFetchUserInfo = () => {
-  if (localStorage.getItem("token") === null) return () => { };
-
   const dispatch = useDispatch();
 
   return async () => {
     try {
+      if (localStorage.getItem("token") === null) return async () => {
+        throw new Error("用户尚未登录");
+      };
+
       const data = await APIUserInfo();
       dispatch(setUserinfo(data.data));
     } catch (error) {

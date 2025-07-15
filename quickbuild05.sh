@@ -27,5 +27,5 @@ echo -e "\n=======================================\n🚀正在构建新官网接
 echo -e "\n=======================================\n🚀正在构建新官网Socket.io服务\n=======================================\n" && eval $rebuild_newmoodle_ws
 
 
-# 查看日志
-docker logs -f masteroftu-newmoodle_api-1
+# # 查看日志
+# docker logs -f masteroftu-newmoodle_api-1

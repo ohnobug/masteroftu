@@ -28,11 +28,12 @@ function LoginPage() {
       });
 
       localStorage.setItem("token", data.data.token);
-      await fetchu();
-      navigate("/chat");
+
+      await fetchu().then(() => navigate("/chat"));
     } catch (error) {
-      if (error.response.data) {
-        setError(error.response.data.message);
+      console.error(error);
+      if (error?.response?.data) {
+        setError(error?.response?.data?.message);
         setIsLoading(false);
       } else {
         setError("网络错误");
