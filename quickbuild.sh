@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 前端
-export buildfrontend="cd frontend/ && ./dockerbuild05.sh && cd .."
+export buildfrontend="cd frontend/ && ./dockerbuild.sh && cd .."
 
 # 数据库
 export rebuild_mariadb="docker compose -f docker-compose.yml build mariadb && docker compose -f docker-compose.yml down mariadb && docker compose -f docker-compose.yml up mariadb -d"
