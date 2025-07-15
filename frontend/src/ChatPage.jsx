@@ -35,6 +35,9 @@ function ChatPage() {
   const md = useRef(null); // markdownit实例
   const chataeraRef = useRef(null); // 对话记录界面
   const socket = useRef(null); // socket实例
+  const inputRef = useRef(null);
+  const bigInputRef = useRef(null);
+
 
   const newChatSession = async (input, chatId) => {
     if (input.trim()) {
@@ -232,7 +235,6 @@ function ChatPage() {
     });
   };
 
-
   // 得到用户信息
   useEffect(() => {
     // 未登录跳到登录页
@@ -252,7 +254,7 @@ function ChatPage() {
       html: true,
       linkify: true,
       typographer: true,
-      langPrefix:   'language-',
+      langPrefix: 'language-',
     }).use(MarkdownItHightlightJS);
 
     md.current.renderer.rules.table_open = () =>
@@ -266,6 +268,7 @@ function ChatPage() {
       '<td style="border: 1px solid #ddd; padding: 8px;">';
   }, []);
 
+  // 会话内容有变化的时候，比如输出状态就要不断切换到底部
   useEffect(() => {
     if (chataeraRef.current) {
       console.log("滚动条垂直位置:", chataeraRef.current.scrollTop);
@@ -278,12 +281,21 @@ function ChatPage() {
     }
   }, [chatSessions]);
 
+  // 有传参过来的时候
   const location = useLocation();
   useEffect(() => {
     if (location.state?.input) {
       fetchNewSession(location.state.input);
     }
   }, [location]);
+
+  useEffect(() => {
+    if (currentChatId == -1) {
+      bigInputRef.current?.focus()
+    } else {
+      inputRef.current?.focus();
+    }
+  }, [currentChatId])
 
   return (
     <>
@@ -387,6 +399,7 @@ function ChatPage() {
                 <input
                   type="text"
                   placeholder="请输入你的问题"
+                  ref={bigInputRef}
                   onChange={(v) => {
                     setInputStr(v.target.value);
                   }}
@@ -481,6 +494,7 @@ function ChatPage() {
                 className="flex-1 rounded-full py-2 px-4 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                ref={inputRef}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSendMessage();
                 }} // 按回车发送
