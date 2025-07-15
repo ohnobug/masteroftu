@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"; // 引入 useState Hook
+import { useEffect, useState, useRef } from "react"; // 引入 useState Hook
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import {
@@ -6,8 +6,7 @@ import {
   APIChatSessions,
   APIChatNewSession,
   APIChatNewMessage,
-  APIChatDelMessage,
-  APIUserInfo,
+  APIChatDelMessage
 } from "./network/api";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -16,8 +15,7 @@ import {
   setChatMessage,
   setTokenToMessage,
 } from "./store/chatSlice";
-
-import { setUserinfo } from "./store/userSlice";
+import { checkIsLogin } from "./utils";
 import markdownit from "markdown-it";
 import MarkdownItHightlightJS from "markdown-it-highlightjs";
 import "highlight.js/styles/github-dark.css";
@@ -163,7 +161,6 @@ function ChatPage() {
     }
   }
 
-
   // 创建新会话
   const fetchNewSession = async (text) => {
     // 新建会话
@@ -234,37 +231,37 @@ function ChatPage() {
     });
   };
 
+
   // 得到用户信息
-  const fetchUserInfo = async () => {
-    const data = await APIUserInfo().catch((error) => {
-      navigate("/login");
-    });
-
-    dispatch(setUserinfo(data.data));
-  };
-
   useEffect(() => {
-    fetchUserInfo().then(() => {
-      fetchSession();
+    // 未登录跳到登录页
+    if (!checkIsLogin()) {
+      navigate("/login");
+      return;
+    }
 
-      connectWs();
+    // 获取会话
+    fetchSession();
 
-      md.current = markdownit({
-        html: true,
-        linkify: true,
-        typographer: true,
-      }).use(MarkdownItHightlightJS);
+    // 连接socketio
+    connectWs();
 
-      md.current.renderer.rules.table_open = () =>
-        '<table style="border-collapse: collapse; width: 100%;">';
-      md.current.renderer.rules.table_close = () => "</table>";
+    // 初始化markdownit实例
+    md.current = markdownit({
+      html: true,
+      linkify: true,
+      typographer: true,
+    }).use(MarkdownItHightlightJS);
 
-      // 修改表头单元格样式
-      md.current.renderer.rules.th_open = () =>
-        '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
-      md.current.renderer.rules.td_open = () =>
-        '<td style="border: 1px solid #ddd; padding: 8px;">';
-    });
+    md.current.renderer.rules.table_open = () =>
+      '<table style="border-collapse: collapse; width: 100%;">';
+    md.current.renderer.rules.table_close = () => "</table>";
+
+    // 修改表头单元格样式
+    md.current.renderer.rules.th_open = () =>
+      '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
+    md.current.renderer.rules.td_open = () =>
+      '<td style="border: 1px solid #ddd; padding: 8px;">';
   }, []);
 
   useEffect(() => {
@@ -445,21 +442,21 @@ function ChatPage() {
                         : "justify-start"
                         }`}
                     >
-                      {message.text ? (
+                      {message?.text ? (
                         <div
-                          className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
+                          className={`max-w-[70%] p-3 rounded-lg ${message?.sender === "user"
                             ? "bg-blue-500 text-white rounded-br-none"
                             : "bg-gray-200 text-black rounded-bl-none"
                             }`}
                           dangerouslySetInnerHTML={{
-                            __html: message.text
-                              ? md.current.render(message.text)
+                            __html: message?.text
+                              ? md.current.render(message?.text)
                               : "",
                           }}
                         ></div>
                       ) : (
                         <div
-                          className={`max-w-[70%] p-3 rounded-lg ${message.sender === "user"
+                          className={`max-w-[70%] p-3 rounded-lg ${message?.sender === "user"
                             ? "bg-blue-500 text-white rounded-br-none"
                             : "bg-gray-200 text-black rounded-bl-none"
                             }`}

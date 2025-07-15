@@ -2,8 +2,9 @@ import { APIUserInfo } from "./network/api.js";
 import { useDispatch } from "react-redux";
 import { setUserinfo } from "./store/userSlice";
 
+// 获取用户信息
 export const useFetchUserInfo = () => {
-  if (localStorage.getItem("token") === null) return () => {};
+  if (localStorage.getItem("token") === null) return () => { };
 
   const dispatch = useDispatch();
 
@@ -17,3 +18,7 @@ export const useFetchUserInfo = () => {
   };
 }
 
+// 检测用户是否登录
+export const checkIsLogin = () => {
+  return localStorage.getItem("token") !== null;
+}

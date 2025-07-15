@@ -88,6 +88,7 @@ services:
       dockerfile: Dockerfile05
     ports:
       - "80:80"
+      - "81:81"
       - "443:443"
     restart: unless-stopped
     depends_on:
