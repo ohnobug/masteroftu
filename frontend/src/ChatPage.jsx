@@ -337,7 +337,9 @@ function ChatPage() {
                         wordBreak: "keep-all",
                         width: "180px",
                         overflow: "hidden",
+                        whiteSpace: "nowrap",
                       }}
+                      title={session.title}
                     >
                       {session.title}
                     </div>
@@ -462,7 +464,7 @@ function ChatPage() {
                             : "bg-gray-200 text-black rounded-bl-none"
                             }`}
                         >
-                          <TDTextLoading />
+                          <TDTextLoading text="思考中" />
                         </div>
                       )}
                     </div>

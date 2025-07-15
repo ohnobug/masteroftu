@@ -246,7 +246,7 @@ function clearVerifyCodeList() {
 
     s.write(script)
 
-    s.write('<table style="border-collapse: collapse; width: 700px;">')
+    s.write('<table style="border-collapse: collapse; width: 1000px;">')
     s.write('<thead><tr>')
 
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">电话</th>')
@@ -386,10 +386,14 @@ async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = 
     except:
         raise HTTPException(status_code=401, detail="token解析错误")
 
+    savetitle = request.title
+    if len(request.title) > 200:
+        savetitle = request.title[:200]
+
     # 插入会话
     query_stmt = insert(TurChatSessions).values(
         user_id = userinfo['id'],
-        title = request.title,
+        title = savetitle,
     )
 
     data = await db.execute(query_stmt)

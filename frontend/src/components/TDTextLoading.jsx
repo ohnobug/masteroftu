@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 
-export const TDTextLoading = () => {
+export const TDTextLoading = (props) => {
     const [dot, setDot] = useState(1);
     const timer = useRef(null);
 
@@ -20,7 +20,7 @@ export const TDTextLoading = () => {
 
     return (
         <div style={{ width: "85px" }}>
-            加载中{".".repeat(dot)}
+            {props.text}{".".repeat(dot)}
         </div>
     );
 }
