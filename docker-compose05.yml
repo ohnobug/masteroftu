@@ -51,6 +51,9 @@ services:
       - DB_PORT=3306
       - DB_HOST=mariadb
       - DB_NAME=tur
+      - BAIDU_SMS_AK=${BAIDU_SMS_AK}
+      - BAIDU_SMS_SK=${BAIDU_SMS_SK}
+      - BAIDU_SMS_ENDPOINT=${BAIDU_SMS_ENDPOINT}
     ports:
       - "8001:8000"
     restart: unless-stopped
