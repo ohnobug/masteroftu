@@ -243,12 +243,6 @@ function ChatPage() {
       return;
     }
 
-    // 获取会话
-    fetchSession();
-
-    // 连接socketio
-    connectWs();
-
     // 初始化markdownit实例
     md.current = markdownit({
       html: true,
@@ -266,6 +260,22 @@ function ChatPage() {
       '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">';
     md.current.renderer.rules.td_open = () =>
       '<td style="border: 1px solid #ddd; padding: 8px;">';
+
+
+    // 获取会话
+    fetchSession().then(() => {
+      // 获取当前的聊天历史
+      if (currentChatId != -1) {
+        fetchChatHistory(currentChatId);
+      }
+
+      // 连接socketio
+      connectWs();
+    });
+
+    return () => {
+      socket.current?.disconnect();
+    };
   }, []);
 
   // 会话内容有变化的时候，比如输出状态就要不断切换到底部
@@ -457,7 +467,7 @@ function ChatPage() {
                         : "justify-start"
                         }`}
                     >
-                      {message?.text ? (
+                      {message?.text && md?.current ? (
                         <div
                           className={`max-w-[70%] p-3 rounded-lg ${message?.sender === "user"
                             ? "bg-blue-500 text-white rounded-br-none"
@@ -465,7 +475,7 @@ function ChatPage() {
                             }`}
                           dangerouslySetInnerHTML={{
                             __html: message?.text
-                              ? md.current.render(message?.text)
+                              ? md.current?.render(message?.text)
                               : "",
                           }}
                         ></div>
