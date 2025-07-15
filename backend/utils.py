@@ -1,6 +1,5 @@
 import hashlib
 import json
-import random
 from datetime import datetime, timedelta, timezone
 import aiohttp
 from passlib.context import CryptContext
@@ -99,7 +98,8 @@ async def check_verify_code(db, phone_number: str, code: str, purpose: schemas.U
     if lastVerifyCode is None:
         raise HTTPException(status_code=429, detail="请先获取验证码")
 
-    if lastVerifyCode.created_at < datetime.now() - timedelta(seconds=60):
+    # 十分钟内有效
+    if lastVerifyCode.created_at < datetime.now() - timedelta(seconds=60 * 10):
         raise HTTPException(status_code=429, detail="验证码已过期")
 
     # 更新为已使用

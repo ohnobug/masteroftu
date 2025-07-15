@@ -4,19 +4,19 @@
 export buildfrontend="cd frontend/ && ./dockerbuild05.sh && cd .."
 
 # 数据库
-export rebuild_mariadb="docker compose -f docker-compose.yml build mariadb && docker compose -f docker-compose.yml down mariadb && docker compose -f docker-compose.yml up mariadb -d"
+export rebuild_mariadb="docker compose -f docker-compose05.yml build mariadb && docker compose -f docker-compose05.yml down mariadb && docker compose -f docker-compose05.yml up mariadb -d"
 
 # Moodle
-export rebuild_moodle="docker compose -f docker-compose.yml build moodle && docker compose -f docker-compose.yml down moodle && docker compose -f docker-compose.yml up moodle -d"
+export rebuild_moodle="docker compose -f docker-compose05.yml build moodle && docker compose -f docker-compose05.yml down moodle && docker compose -f docker-compose05.yml up moodle -d"
 
 # API
-export rebuild_newmoodle_api="docker compose -f docker-compose.yml build newmoodle_api && docker compose -f docker-compose.yml down newmoodle_api && docker compose -f docker-compose.yml up newmoodle_api -d"
+export rebuild_newmoodle_api="docker compose -f docker-compose05.yml build newmoodle_api && docker compose -f docker-compose05.yml down newmoodle_api && docker compose -f docker-compose05.yml up newmoodle_api -d"
 
 # Socket.io
-export rebuild_newmoodle_ws="docker compose -f docker-compose.yml build newmoodle_ws && docker compose -f docker-compose.yml down newmoodle_ws && docker compose -f docker-compose.yml up newmoodle_ws -d"
+export rebuild_newmoodle_ws="docker compose -f docker-compose05.yml build newmoodle_ws && docker compose -f docker-compose05.yml down newmoodle_ws && docker compose -f docker-compose05.yml up newmoodle_ws -d"
 
 # Nginx
-export rebuild_nginx="docker compose -f docker-compose.yml build nginx && docker compose -f docker-compose.yml down nginx && docker compose -f docker-compose.yml up nginx -d"
+export rebuild_nginx="docker compose -f docker-compose05.yml build nginx && docker compose -f docker-compose05.yml down nginx && docker compose -f docker-compose05.yml up nginx -d"
 
 
 # echo -e "\n=======================================\n🚀正在构建Mariadb\n=======================================\n"            && eval $rebuild_mariadb

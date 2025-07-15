@@ -16,6 +16,7 @@ from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint, p, check_verify_code
 from io import StringIO
+from sms import BAIDUSMS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -206,8 +207,16 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
         if userinfo is not None:
             raise HTTPException(status_code=409, detail="手机号已被注册")
 
+    # 验证码
+    code = str(generate_numeric_code_randint())
 
-    code = generate_numeric_code_randint()
+    # 调用接口发送验证码
+    if request.purpose == schemas.UserGetVerifyCodePurposeEnum.REGISTER:
+        BAIDUSMS.send_register_verify_code(request.phone_number, code)
+    elif request.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD:
+        BAIDUSMS.send_reset_password_verify_code(request.phone_number, code)
+
+    # 保存验证码
     insert_stmt = insert(TurVerifyCodes).values(
         phone_number=request.phone_number,
         code=code,

@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import { TDTextLoading } from "./components/TDTextLoading";
 
+
 function ChatPage() {
   const navigate = useNavigate();
   const chatSessions = useSelector((state) => state.chat.chatSessions);
@@ -251,6 +252,7 @@ function ChatPage() {
       html: true,
       linkify: true,
       typographer: true,
+      langPrefix:   'language-',
     }).use(MarkdownItHightlightJS);
 
     md.current.renderer.rules.table_open = () =>
@@ -427,7 +429,7 @@ function ChatPage() {
           <div className="flex-1 bg-white/90 rounded-lg flex flex-col shadow-lg overflow-hidden">
             {/* 消息显示区域 */}
             <div
-              className="flex-1 p-4 overflow-y-auto flex flex-col-reverse"
+              className="flex-1 p-4 overflow-y-auto flex flex-col-reverse markdown-body"
               ref={chataeraRef}
             >
               {/* 使用 flex-col-reverse 让最新的消息在底部，滚动向上 */}
