@@ -11,7 +11,7 @@ const TDSFooter = () => {
       {location.pathname !== "/learning_paths" ? (
         <footer className="relative bottom-0 left-0 w-full p-4 z-20 mt-20 text-center">
           <div className="relative text-white/70 text-xs md:text-sm z-20">
-            <span className="mb-1">© 2025 智能客服. All Rights Reserved.</span>
+            <span className="mb-1">© 2025 图克教育. All Rights Reserved.</span>
             <a
               href="https://beian.miit.gov.cn/"
               target="_blank"
@@ -41,7 +41,7 @@ const TDSFooter = () => {
           style={{ background: "rgb(12, 12, 44)" }}
         >
           <div className="relative text-white/70 text-xs md:text-sm z-20">
-            <span className="mb-1">© 2025 智能客服. All Rights Reserved.</span>
+            <span className="mb-1">© 2025 图克教育. All Rights Reserved.</span>
             <a
               href="https://beian.miit.gov.cn/"
               target="_blank"
