@@ -70,3 +70,11 @@ def generate_numeric_code_randint():
     # 生成一个介于 100000 和 999999 之间的随机整数
     code = random.randint(100000, 999999)
     return code
+
+def p(stri: str):
+    print("\n" * 2)
+    print("❤️" * 30)
+    print(stri)
+    print("❤️" * 30)
+    print("\n" * 2)
+    

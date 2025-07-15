@@ -31,22 +31,28 @@ function LoginPage() {
     setError(null); // 重置错误信息
     setIsLoading(true); // 开始加载
 
-    const data = await APILogin({
-      phone_number: phoneNumber,
-      password: password,
-    });
+    try {
+      const data = await APILogin({
+        phone_number: phoneNumber,
+        password: password,
+      });
 
-    if (data.code != 200) {
-      setError(data.message);
-      setIsLoading(false);
-      return;
+      localStorage.setItem("token", data.data.token);
+      await fetchUserInfo();
+      navigate("/chat");
+    } catch (error) {
+      if (error.response.data) {
+        setError(error.response.data.message);
+        setIsLoading(false);
+      } else {
+        setError("网络错误");
+        setIsLoading(false);
+      }
     }
 
-    localStorage.setItem("token", data.data.token);
 
-    await fetchUserInfo();
 
-    navigate("/chat");
+
   };
 
   return (

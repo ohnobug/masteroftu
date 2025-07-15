@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-
-// 假设这些是你的共享组件，我们继续使用它们保持风格统一
 import TDSBg from "./components/TDSBg";
 import TDSHeader from "./components/TDSHeader";
 import TDSFooter from "./components/TDSFooter";
+import { APIGetVerifyCode, APIResetPassword } from "./network/api";
+import { useNavigate } from "react-router";
 
 function ForgotPasswordPage() {
   // 使用 state 来管理表单输入、错误信息和各种加载状态
@@ -12,6 +11,8 @@ function ForgotPasswordPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState(null);
+
+  const navigate = useNavigate();
 
   // 主提交按钮的加载状态
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +31,7 @@ function ForgotPasswordPage() {
     };
   }, []);
 
-  // --- 获取验证码的处理函数 ---
+  // 获取验证码的处理函数
   const handleGetCode = async () => {
     // 简单的前端手机号校验
     if (!phoneNumber || !/^1[3-9]\d{9}$/.test(phoneNumber)) {
@@ -42,10 +43,9 @@ function ForgotPasswordPage() {
     setIsSendingCode(true);
 
     try {
-      // --- 使用 Axios 发送获取验证码的请求 ---
-      // 请将 '/api/v1/send-verification-code' 替换成你真实的API接口
-      await axios.post("/api/v1/send-verification-code", {
-        phoneNumber: phoneNumber,
+      const result = await APIGetVerifyCode({
+        phone_number: phoneNumber,
+        purpose: "forgot_password"
       });
 
       // 发送成功后开始倒计时
@@ -62,33 +62,29 @@ function ForgotPasswordPage() {
       }, 1000);
     } catch (err) {
       setIsSendingCode(false);
-      console.error("验证码发送失败:", err);
       setError(err.response?.data?.message || "验证码发送失败，请稍后再试。");
     }
   };
 
-  // --- 表单提交处理函数 ---
   const handleResetSubmit = async (event) => {
     event.preventDefault(); // 阻止表单默认的刷新页面的行为
     setError(null); // 重置错误信息
     setIsLoading(true); // 开始加载
 
     try {
-      // --- 使用 Axios 发送重置密码的请求 ---
-      // 请将 '/api/v1/reset-password' 替换成你真实的API接口
-      const response = await axios.post("/api/v1/reset-password", {
-        phoneNumber: phoneNumber,
-        code: verificationCode,
-        newPassword: newPassword,
+      const response = await APIResetPassword({
+        phone_number: phoneNumber,
+        verify_code: verificationCode,
+        new_password: newPassword,
       });
 
       // 重置成功
-      console.log("密码重置成功:", response.data);
       setIsLoading(false);
 
       // 密码重置成功后的操作，例如提示用户并跳转到登录页
       alert("密码重置成功！请使用新密码登录。");
-      window.location.href = "/login"; // 跳转到登录页
+
+      navigate("/login");
     } catch (err) {
       // 重置失败
       console.error("密码重置失败:", err);
@@ -180,8 +176,8 @@ function ForgotPasswordPage() {
                     {isSendingCode
                       ? "发送中..."
                       : countdown > 0
-                      ? `${countdown}s 后重试`
-                      : "获取验证码"}
+                        ? `${countdown}s 后重试`
+                        : "获取验证码"}
                   </button>
                 </div>
               </div>

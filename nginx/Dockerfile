@@ -9,6 +9,8 @@ COPY nginx.conf /etc/nginx/conf.d/nginx.conf
 COPY certs/turcar.net.cn.key /etc/ssl/certs/turcar.net.cn.key
 COPY certs/fullchain.cer /etc/ssl/certs/fullchain.cer
 
+COPY static-files /usr/share/nginx/html
+
 # 暴露 80 端口
 EXPOSE 80
 EXPOSE 443

@@ -14,7 +14,7 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint
+from utils import get_token, get_userInfo_from_token, password_hash, generate_numeric_code_randint, p
 from io import StringIO
 
 @asynccontextmanager
@@ -157,18 +157,46 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
         message="注册成功"
     )
 
-# 忘记密码
+# 重置密码
 @app.post("/api/reset_password", response_model=schemas.UserResetPasswordRequestOut, summary="重置密码")
 async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncSession = Depends(database.get_db)):
     """
     重置密码
     """
+    # 检测用户是否注册
     user_exists_stmt = select(TurUsers).where(TurUsers.phone_number == request.phone_number)
     result = await db.execute(user_exists_stmt)
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="手机号未注册")
 
+    # 检查验证码
+    select_stmt = select(
+        TurVerifyCodes
+    ).where(
+        TurVerifyCodes.phone_number == request.phone_number,
+        TurVerifyCodes.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD,
+        TurVerifyCodes.is_used == False,
+        TurVerifyCodes.code == request.verify_code
+    ).order_by(
+        TurVerifyCodes.id.desc()
+    ).limit(1)
+    lastVerifyCode = (await db.execute(select_stmt)).scalar_one_or_none()
+
+    if lastVerifyCode is None:
+        raise HTTPException(status_code=429, detail="请先获取验证码")
+
+    if lastVerifyCode.created_at < datetime.datetime.now() - datetime.timedelta(seconds=60):
+        raise HTTPException(status_code=429, detail="验证码已过期")
+
+    # 更新为已使用
+    update_stmt = update(TurVerifyCodes).where(
+        TurVerifyCodes.id == lastVerifyCode.id
+    ).values(
+        is_used=True
+    )
+    result = await db.execute(update_stmt)
+    await db.commit()
 
     update_stmt = update(TurUsers).where(
         TurUsers.phone_number == request.phone_number
@@ -197,18 +225,16 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
     ).order_by(
         TurVerifyCodes.id.desc()
     ).limit(1)
-    data = await db.execute(select_stmt)
-    lastVerifyCode = data.first()
+    lastVerifyCode = (await db.execute(select_stmt)).scalar()
 
     if lastVerifyCode is not None:
-        if lastVerifyCode[0].created_at > datetime.datetime.now() - datetime.timedelta(seconds=5):
-            print("-" * 50)
-            print(lastVerifyCode[0].created_at)
-            print(datetime.datetime.now() - datetime.timedelta(seconds=5))
-            print("-" * 50)
+        p(lastVerifyCode.created_at)
+        p(datetime.datetime.now() - datetime.timedelta(seconds=60))
+
+        if lastVerifyCode.created_at > datetime.datetime.now() - datetime.timedelta(seconds=60):
             raise HTTPException(status_code=429, detail="60秒内不允许重复获取验证码")
     # ------------------------------------------------------------------------
-    
+
     code = generate_numeric_code_randint()
     insert_stmt = insert(TurVerifyCodes).values(
         phone_number=request.phone_number,
@@ -228,36 +254,71 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
 @app.get("/api/get_verify_code_list", response_class=HTMLResponse, summary="获取验证码列表")
 async def get_verify_code_list(db: AsyncSession = Depends(database.get_db)):
     # ------------------------------------------------------------------------
-    # 不管用没用60秒内不能重复获取验证码
     select_stmt = select(TurVerifyCodes).order_by(TurVerifyCodes.id.desc())
     data = (await db.scalars(select_stmt)).all()
     # ------------------------------------------------------------------------
 
     s = StringIO()
 
-    s.write('<table style="border-collapse: collapse; width: 500px;">')
+    script = """
+<script>
+function clearVerifyCodeList() {
+    fetch("/api/clear_verify_code_list", {
+        method: "POST"
+    }).then(res => {
+        if (res.status == 200) {
+            location.reload();
+        }
+    })
+}
+</script>
+"""
+
+    s.write(script)
+
+    s.write('<table style="border-collapse: collapse; width: 600px;">')
     s.write('<thead><tr>')
 
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">电话</th>')
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">验证码</th>')
+    s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">是否已使用</th>')
     s.write('<th style="border: 1px solid black; padding: 4px; text-align: left;">日期</th>')
     s.write('</tr></thead>')
     s.write('<tbody>')
 
-    for item in data:
-        s.write('<tr>')
-        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.phone_number}</td>')
-        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.code}</td>')
-        s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.created_at}</td>')
-        s.write('</tr>')
+    if len(data) > 0:
+        for item in data:
+            s.write('<tr>')
+            s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.phone_number}</td>')
+            s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.code}</td>')
+            if item.is_used:
+                s.write(f'<td style="border: 1px solid black; padding: 4px;">是</td>')
+            else:
+                s.write(f'<td style="border: 1px solid black; padding: 4px;">否</td>')
+            s.write(f'<td style="border: 1px solid black; padding: 4px;">{item.created_at}</td>')
+            s.write('</tr>')
+    else:
+        s.write("<tr><td style=\"border: 1px solid black; padding: 4px; text-align: center;\" colspan=\"4\">无数据</td></tr>")
 
     s.write("</tbody>")
     s.write("</table>")
+    s.write("<br />")
+    s.write(f"<button onclick=\"clearVerifyCodeList()\">清空</button>")
     content = s.getvalue()
     s.close()
 
     return content
 
+
+# 清空手机验证码列表(测试用)
+@app.post("/api/clear_verify_code_list", response_model=schemas.BaseResponse, summary="清空验证码列表")
+async def clear_verify_code_list(db: AsyncSession = Depends(database.get_db)):
+    delete_stmt = delete(TurVerifyCodes)
+    data = await db.execute(delete_stmt)
+
+    await db.commit()
+
+    return schemas.BaseResponse(code=200, message="清空成功")
 
 # 获取用户信息
 @app.post("/api/userinfo", response_model=schemas.UserInfoRequestOut)
@@ -266,8 +327,6 @@ async def userinfo(db: AsyncSession = Depends(database.get_db), token: str = Dep
         userinfo = get_userInfo_from_token(token)
     except:
         HTTPException(status_code=401, detail="用户尚未登录")
-
-    print(userinfo)
     
     return schemas.UserInfoRequestOut(
         code=200,
