@@ -6,11 +6,11 @@ from config import DATABASE_URL
 
 engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    echo=False,
     future=True,
-    pool_size=20,
-    pool_recycle=30,
-    max_overflow=30
+    pool_size=30,
+    pool_recycle=1800,
+    max_overflow=100
 )
 AsyncSessionLocal: sessionmaker = sessionmaker(
     engine,
