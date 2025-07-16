@@ -67,6 +67,17 @@ services:
     networks:
       - moodle_network
 
+  # 消息队列
+  rabbitmq:
+    image: bitnami/rabbitmq:4.1.2
+    environment:
+      - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - moodle_network
+
   # 对话socket.io服务
   newmoodle_ws:
     build:
@@ -81,11 +92,13 @@ services:
       - LLM_API_KEY=ollama
       - LLM_BASE_URL=http://192.168.0.5:11434/v1
       - LLM_MODEL_NAME=qwen2.5
+      - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
     restart: unless-stopped
     ports:
       - "5001:5000"
     depends_on:
       - mariadb
+      - rabbitmq
     networks:
       - moodle_network
 

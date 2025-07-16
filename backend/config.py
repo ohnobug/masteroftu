@@ -25,3 +25,4 @@ SMS_CODE_EXPIRE_MINUTES = 5
 LLM_API_KEY = os.getenv("LLM_API_KEY", "ollama")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://192.168.0.5:11434/v1")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen2.5")
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmqservice:5672/")

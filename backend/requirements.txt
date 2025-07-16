@@ -13,3 +13,6 @@ python-socketio
 openai
 asyncmy==0.2.10
 bce-python-sdk
+aio_pika
+pika
+gunicorn

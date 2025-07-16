@@ -208,11 +208,12 @@ function ChatPage() {
   // 连接websocket
   const connectWs = () => {
     socket.current = io(import.meta.env.VITE_WS_BASE_URL, {
+      transports: ["websocket"],
       reconnectionDelayMax: 10000,
       // path: '/wschat/',
-      extraHeaders: {
-        authorization: `bearer ` + localStorage.getItem("token"),
-      },
+      auth: {
+        token: localStorage.getItem("token")
+      }
     });
 
     socket.current.on("connect", () => {
