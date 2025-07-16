@@ -240,3 +240,8 @@ async def userinfo(db: AsyncSession = Depends(get_db), token: str = Depends(oaut
             phone_number=userinfo['phone_number']
         )
     )
+
+# test
+@router.post("/api/test", response_class=HTMLResponse)
+async def test():
+    return "hello world"

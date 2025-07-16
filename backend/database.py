@@ -8,7 +8,7 @@ engine: AsyncEngine = create_async_engine(
     DATABASE_URL,
     echo=False,
     future=True,
-    pool_size=30,
+    pool_size=70,
     pool_recycle=1800,
     max_overflow=100
 )

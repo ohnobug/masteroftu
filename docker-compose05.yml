@@ -56,6 +56,11 @@ services:
       - BAIDU_SMS_ENDPOINT=${BAIDU_SMS_ENDPOINT}
     ports:
       - "8001:8000"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
     restart: unless-stopped
     depends_on:
       - mariadb
