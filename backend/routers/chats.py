@@ -3,7 +3,7 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 import schemas
 from routers.oauth2_scheme import oauth2_scheme
-from utils import get_userInfo_from_token
+from utils.utils import get_userInfo_from_token
 from database import TurChatHistory, TurChatSessions, get_db
 
 router = APIRouter()

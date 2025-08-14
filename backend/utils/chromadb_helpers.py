@@ -1,4 +1,3 @@
-import json
 import chromadb
 import config
 from utils.llm import get_embedding

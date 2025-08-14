@@ -1,3 +1,7 @@
+import sys
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import asyncio
 from datetime import datetime
 import io
@@ -13,7 +17,8 @@ from sqlalchemy.ext.asyncio.session import AsyncSession
 from openai import AsyncOpenAI
 from enum import Enum
 import database
-from utils import get_userInfo_from_token, p
+from utils.utils import get_userInfo_from_token, p
+from utils.chromadb_helpers import chroma_format_knowledge
 
 
 class RoleEnum(str, Enum):
@@ -29,6 +34,7 @@ class Message(BaseModel):
 class GetTextIn(BaseModel):
     ai_message_id: int = Field(...)
     chat_session_id: int = Field(...)
+    question: str = Field(...)
 
 print(f"TIHS IS LLM_API_KEY: {config.LLM_API_KEY}")
 print(f"TIHS IS LLM_BASE_URL: {config.LLM_BASE_URL}")
@@ -58,19 +64,13 @@ static_files = {
     '/static': './public',
 }
 
-mgr = socketio.AsyncAioPikaManager(config.RABBITMQ_URL)
+# 使用 AsyncServer 和 ASGIApp 以支持 async/await 语法
 sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     async_mode='asgi',
     cors_allowed_origins='*',
-    client_manager=mgr,
     transports=['websocket']
-    # cors_allowed_origins=[
-    #     'http://localhost:5000',
-    #     'http://localhost:5173',
-    #     'https://admin.socket.io',
-    # ]
 )
 
 app = socketio.ASGIApp(sio, static_files=static_files)
@@ -91,166 +91,266 @@ async def handle_shutdown():
     else:
         print("Database engine not found or not initialized.")
 
-class WschatNamespace(socketio.AsyncNamespace):
-    async def on_connect(self, sid, environ, auth):
-        if not auth or 'token' not in auth:
-                print(f"Connection rejected for {sid}: No auth token provided.")
-                # 拒绝连接
-                raise socketio.exceptions.ConnectionRefusedError('Authentication failed: token missing')
+@sio.on('connect')
+async def connect(sid, environ, auth):
+    if not auth or 'token' not in auth:
+            print(f"Connection rejected for {sid}: No auth token provided.")
+            # 拒绝连接
+            raise socketio.exceptions.ConnectionRefusedError('Authentication failed: token missing')
 
-        try:
-            # bearer = environ.get('HTTP_AUTHORIZATION').split(' ')[1]
-            bearer = auth['token']
-            p(bearer)
-            userinfo = get_userInfo_from_token(bearer)
-            async with self.session(sid) as session:
-                session['id'] = userinfo['id']
-                session['phone_number'] = userinfo['phone_number']
-        except socketio.exceptions.ConnectionRefusedError as e:
-            # 捕获 ConnectionRefusedError 并重新抛出
-            # 这样做可以让你在抛出前打印或记录特定信息，或者根据不同原因抛出不同异常
-            print(f"Connection refused for sid {sid}: {e}")
-            raise e # 重新抛出异常，拒绝连接
-        except Exception as e:
-            # 捕获其他潜在错误（如 split() 错误、get() 返回 None 等）
-            print(f"Authentication process error for sid {sid}: {e}")
-            # 对于意外错误，同样拒绝连接
-            raise socketio.exceptions.ConnectionRefusedError(f'认证过程中发生错误: {e}')
+    try:
+        bearer = auth['token']
+        p(bearer)
+        userinfo = get_userInfo_from_token(bearer)
+        async with sio.session(sid) as session:
+            session['id'] = userinfo['id']
+            session['phone_number'] = userinfo['phone_number']
+    except socketio.exceptions.ConnectionRefusedError as e:
+        print(f"Connection refused for sid {sid}: {e}")
+        raise e # 重新抛出异常，拒绝连接
+    except Exception as e:
+        print(f"Authentication process error for sid {sid}: {e}")
+        raise socketio.exceptions.ConnectionRefusedError(f'认证过程中发生错误: {e}')
 
-    async def on_disconnect(self, sid, reason):
-        print('disconnect ', sid, reason)
+@sio.on('disconnect')
+async def disconnect(sid):
+    # 'reason' 参数在标准的 disconnect 事件处理器中不可用
+    print(f'disconnect {sid}')
 
 
-    # 辅助函数，用于处理和发送缓冲区内容
-    async def process_buffer(current_buffer: str):        
-        content_to_process = current_buffer.strip()
-        if not content_to_process:
-            return
+# 辅助函数，用于处理和发送缓冲区内容
+async def process_buffer(buffer: str, chat_session_id: str, ai_message_id: str):
+    content_to_process = buffer.strip()
+    if not content_to_process:
+        return
 
-        payload = {}
+    payload = {}
 
-        # 联系人工客服按钮
-        if content_to_process.startswith("[BUTTON]"):
-            payload.update({"type": "button", "title": content_to_process.replace("[BUTTON]", "").strip(), "url": "联系客服"})
-        # 动作
-        elif content_to_process.startswith("[ACTION]"):
-            payload.update({"type": "action", "title": content_to_process.replace("[ACTION]", "").strip()})
-        # 小测试
-        elif content_to_process.startswith("[QUIZ]"):
-            payload.update({"type": "quiz", "title": content_to_process.replace("[QUIZ]", "").strip()})
-        # 参考链接
-        elif content_to_process.startswith("[RESOURCE]"):
-            print(content_to_process)
-            pattern = r'\[(.*?)\]\s+?\[(.*?)\]\((.*)'
-            match = re.search(pattern, content_to_process)
-            if match:
-                token_text = match.group(2)
-                url = match.group(3)
-                payload.update({"type": "resource", "title": token_text, "url": f"{url}"})
-        else:
-            payload.update({"type": "text", "content": content_to_process})
+    # 联系人工客服按钮
+    if content_to_process.startswith("[BUTTON]"):
+        payload.update({
+            "chat_session_id": chat_session_id,
+            "ai_message_id": ai_message_id,
+            "type": "button",
+            "token": content_to_process.replace("[BUTTON]", "").strip(),
+        })
+    # 动作
+    elif content_to_process.startswith("[ACTION]"):
+        payload.update({
+            "chat_session_id": chat_session_id,
+            "ai_message_id": ai_message_id,
+            "type": "action",
+            "token": content_to_process.replace("[ACTION]", "").strip()
+        })
+    # 小测试
+    elif content_to_process.startswith("[QUIZ]"):
+        payload.update({
+            "chat_session_id": chat_session_id,
+            "ai_message_id": ai_message_id,
+            "type": "quiz",
+            "token": content_to_process.replace("[QUIZ]", "").strip()
+        })
+    # 参考链接
+    elif content_to_process.startswith("[REFERENCE]"):
+        pattern = r'\[(.*?)\]\s+?\[(.*?)\]\((.*)'
+        match = re.search(pattern, content_to_process)
+        if match:
+            token_text = match.group(2)
+            url = match.group(3)
+            payload.update({
+                "chat_session_id": chat_session_id,
+                "ai_message_id": ai_message_id,
+                "type": "reference",
+                "token": token_text,
+                "url": f"{url}"
+            })
+    # 打开资源
+    elif content_to_process.startswith("[RESOURCE]"):
+        pattern = r'\[(.*?)\]\s+?\[(.*?)\]\((.*)'
+        match = re.search(pattern, content_to_process)
+        if match:
+            token_text = match.group(2)
+            url = match.group(3)
+            payload.update({
+                "chat_session_id": chat_session_id,
+                "ai_message_id": ai_message_id,
+                "type": "resource",
+                "token": token_text,
+                "url": f"{url}"
+            })
+    else:
+        payload.update({
+            "chat_session_id": chat_session_id,
+            "ai_message_id": ai_message_id,
+            "type": "text",
+            "token": content_to_process
+        })
 
-        yield json.dumps(payload, ensure_ascii=False)
-        await asyncio.sleep(0.01)
+    yield json.dumps(payload, ensure_ascii=False)
+    await asyncio.sleep(0.01)
+
+# 知识库插入到上下文
+async def knowledge_insert(chat_context: list, knowledge_list: list = []):
+    """
+    少样本提示
+    """
+    for item in knowledge_list:
+        question = item['related']
+        urls = item['urls']
+
+        chat_context.append(Message(role=RoleEnum.user, content=f"【参考资料】{item['answer']}\n\n【用户问题】{item['question']}"))
+        chat_context.append(Message(role=RoleEnum.assistant, content=f"{item['answer']}\n{urls}\n{question}"))
+
+    chat_context.append(Message(role=RoleEnum.user, content=f"可以讲个笑话吗？"))
+    chat_context.append(Message(role=RoleEnum.assistant, content=f"对不起，不可以哦。"))
+
+@sio.on('get_text')
+async def get_text(sid, data):
+    textin = GetTextIn.model_validate(obj=data)
+
+    async with sio.session(sid) as session:
+        userid = session['id']
+        async with AsyncSessionLocal() as db:
+            try:
+                db: AsyncSession = db
+
+                # 查找会话记录
+                query_stmt = select(
+                    TurChatSessions.id, 
+                    TurChatSessions.user_id, 
+                    TurChatSessions.title, 
+                    TurChatSessions.created_at
+                ).where(
+                    TurChatSessions.id == textin.chat_session_id,
+                    TurChatSessions.user_id == userid
+                )
+                result = await db.execute(query_stmt)
+                if result.fetchone() is None:
+                    await sio.emit('response_text', {'data': '没找到会话记录'}, to=sid)
+                    return
 
 
-    async def on_get_text(self, sid, data):
-        textin = GetTextIn.model_validate(obj=data)
+                # 查找该会话的所有历史记录
+                query_stmt = select(
+                    TurChatHistory.id, 
+                    TurChatHistory.user_id,
+                    TurChatHistory.chat_session_id,
+                    TurChatHistory.sender,
+                    TurChatHistory.text,
+                    TurChatHistory.created_at
+                ).where(
+                    TurChatHistory.chat_session_id == textin.chat_session_id,
+                    TurChatHistory.user_id == userid
+                ).order_by(
+                    TurChatHistory.id.asc()
+                )
+                result = await db.execute(query_stmt)
+                
+                history: List[TurChatHistory] = result.mappings().all()            
+                historyLength = len(history)
 
-        async with self.session(sid) as session:
-            userid = session['id']
-            async with AsyncSessionLocal() as db:
-                try:
-                    db: AsyncSession = db
+                # 在历史中取出问题
+                user_question = textin.question.strip()
 
-                    # 查找会话记录
-                    query_stmt = select(
-                        TurChatSessions.id, 
-                        TurChatSessions.user_id, 
-                        TurChatSessions.title, 
-                        TurChatSessions.created_at
-                    ).where(
-                        TurChatSessions.id == textin.chat_session_id,
-                        TurChatSessions.user_id == userid
-                    )
-                    result = await db.execute(query_stmt)
-                    if result.fetchone() is None:
-                        await self.emit('response_text', {'data': '没找到会话记录'}, to=sid)
-                        return
+                # 整理成上下文提交给大模型
+                chat_context = []
+                
+                system_prompt = config.LLM_SYSTEM_PROMPT
 
+                # 系统提示词
+                chat_context.append(Message(role=RoleEnum.system, content=system_prompt))
 
-                    # 查找该会话的所有历史记录
-                    query_stmt = select(
-                        TurChatHistory.id, 
-                        TurChatHistory.user_id,
-                        TurChatHistory.chat_session_id,
-                        TurChatHistory.sender,
-                        TurChatHistory.text,
-                        TurChatHistory.created_at
-                    ).where(
-                        TurChatHistory.chat_session_id == textin.chat_session_id,
-                        TurChatHistory.user_id == userid
-                    ).order_by(
-                        TurChatHistory.id.asc()
-                    )
-                    result = await db.execute(query_stmt)
-                    
-                    history: List[TurChatHistory] = result.mappings().all()            
-                    historyLength = len(history)
+                # 从知识库中查询出来的知识
+                knowledge_list = await chroma_format_knowledge(
+                    question=user_question,
+                    n_results=config.CHROMADB_MAXIMUM_QUERY_RESULT,
+                    threshold=config.CHROMADB_QUERY_THRESHOLD
+                )
 
-                    # 整理成上下文提交给大模型
-                    chat_context = []
-                    
-                    system_prompt = config.LLM_SYSTEM_PROMPT
-                    
-                    # 系统提示词
-                    chat_context.append(Message(role=RoleEnum.system, content=system_prompt))
+                if knowledge_list:
+                    await knowledge_insert(chat_context, knowledge_list)
 
-                    
-                    for key, chat in enumerate(history):
-                        # 判断用户提供的id与数据库的id是否对应
-                        if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
-                            if chat.id != textin.ai_message_id:
-                                await self.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
-                                return
-                            continue
+                for key, chat in enumerate(history):
+                    # 判断用户提供的id与数据库的id是否对应
+                    if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
+                        if chat.id != textin.ai_message_id:
+                            await sio.emit('response_text', {'data': '没找到新建的AI对话记录'}, to=sid)
+                            return
+                        continue
 
-                        if chat.sender == 'user':
-                            chat_context.append(Message(role=RoleEnum.user, content=chat.text))
+                    if chat.sender == 'user':
+                        chat_context.append(Message(role=RoleEnum.user, content=chat.text))
+                    else:
+                        chat_context.append(Message(role=RoleEnum.assistant, content=chat.text))
+
+                print("❤️" * 50)
+                print(chat_context)
+                print("❤️" * 50)
+                print("\n\n")
+
+                # 流式输出到浏览器
+                buffer = ""
+                full_response_buffer = io.StringIO()
+                async for eachtoken in llmchat(chat_context):
+                    print(eachtoken)
+                    full_response_buffer.write(eachtoken)
+
+                    # ===========================================
+                    # 特殊输出
+
+                    # 如果是[开头就开始累计
+                    if eachtoken.strip().startswith('['):
+                        buffer += eachtoken
+                        continue
+
+                    # 一直累计到换行
+                    if len(buffer) > 0:
+                        if "\n" in eachtoken:
+                            async for item in process_buffer(buffer=buffer, chat_session_id=textin.chat_session_id, ai_message_id=textin.ai_message_id):
+                                await sio.emit("token_output", item, to=sid)
+                            buffer = ""
                         else:
-                            chat_context.append(Message(role=RoleEnum.assistant, content=chat.text))
+                            buffer += eachtoken
+                        continue
+                    # ===========================================
+                    
+                    # 正常eachtoken输出
+                    payload = {
+                        "chat_session_id": textin.chat_session_id,
+                        "ai_message_id": textin.ai_message_id,
+                        "type": "text",
+                        "token": eachtoken
+                    }
+                    await sio.emit("token_output", json.dumps(payload, ensure_ascii=False), to=sid)
 
-                    text_buffer = io.StringIO()
+                # 最后一个buffer的处理
+                if len(buffer) > 0:
+                    async for item in process_buffer(buffer=buffer, chat_session_id=textin.chat_session_id, ai_message_id=textin.ai_message_id):
+                        await sio.emit("token_output", item, to=sid)
 
-                    # 流式输出到浏览器
-                    async for eachtoken in llmchat(chat_context):
-                        text_buffer.write(eachtoken)
-                        await self.emit("token_output", json.dumps({
-                            "chat_session_id": textin.chat_session_id,
-                            "ai_message_id": textin.ai_message_id,
-                            "type": "text",
-                            "token": eachtoken
-                        }), to=sid)
+                text = full_response_buffer.getvalue()
+                print(f"总的是：{text}")
+                if text == "":
+                    text = '-'
 
-                    # 更新AI回答到数据库
-                    query_stmt = update(TurChatHistory).values(
-                        text=text_buffer.getvalue(),
-                        created_at=datetime.now()
-                    ).where(
-                        TurChatHistory.id == textin.ai_message_id,
-                        TurChatHistory.sender == "ai",
-                        TurChatHistory.user_id == userid
-                    )
+                # 更新AI回答到数据库
+                query_stmt = update(TurChatHistory).values(
+                    text=text,
+                    created_at=datetime.now()
+                ).where(
+                    TurChatHistory.id == textin.ai_message_id,
+                    TurChatHistory.sender == "ai",
+                    TurChatHistory.user_id == userid
+                )
 
-                    result = await db.execute(query_stmt)
-                    await db.commit()
-                except Exception:
-                    await db.rollback()
-                    raise
-                finally:
-                    await db.close()
+                result = await db.execute(query_stmt)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                raise
+            finally:
+                await db.close()
 
-    async def on_test(self, sid, data):
-        await self.emit("test_response", "hello now is" + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), to=sid)
-
-sio.register_namespace(WschatNamespace('/'))
+@sio.on('test')
+async def test(sid, data):
+    await sio.emit("test_response", "hello now is" + datetime.now().strftime("%Y-%m-%d %H:%M:%S"), to=sid)
