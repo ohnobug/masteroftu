@@ -89,10 +89,19 @@ services:
       - DB_PORT=3306
       - DB_HOST=mariadb
       - DB_NAME=tur
-      - LLM_API_KEY=ollama
-      - LLM_BASE_URL=http://192.168.0.5:11434/v1
-      - LLM_MODEL_NAME=qwen2.5
       - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
+      # - LLM_API_KEY=ollama
+      # - LLM_BASE_URL=http://192.168.0.5:11434/v1
+      # - LLM_MODEL_NAME=qwen2.5
+      # - EMBEDDING_API_KEY=ollama
+      # - EMBEDDING_BASE_URL=http://192.168.0.5:11434/v1
+      # - EMBEDDING_MODEL_NAME=bge-m3
+      - LLM_API_KEY=sk-jwcnjpikvwlvkqaodhmtqallesmqoxakvfpigazqdjfqkyxo
+      - LLM_BASE_URL=https://api.siliconflow.cn/v1
+      - LLM_MODEL_NAME=THUDM/glm-4-9b-chat
+      - EMBEDDING_API_KEY=sk-jwcnjpikvwlvkqaodhmtqallesmqoxakvfpigazqdjfqkyxo
+      - EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
+      - EMBEDDING_MODEL_NAME=BAAI/bge-large-zh-v1.5
     restart: unless-stopped
     ports:
       - "5001:5000"
