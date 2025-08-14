@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"; // 引入 useState Hook
 import TDSBg from "./components/TDSBg";
-import TDSHeader from "./components/TDSHeader";
+import TDSHeader2 from "./components/TDSHeader2";
 import {
   APIChatHistory,
   APIChatSessions,
@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import { TDTextLoading } from "./components/TDTextLoading";
 import "./ChatPage.scss"
+import Chatpdf from "./Chatpdf";
 
 function ChatPage() {
   const navigate = useNavigate();
@@ -318,7 +319,7 @@ function ChatPage() {
       <TDSBg />
 
       {/* 顶部导航栏 */}
-      <TDSHeader />
+      <TDSHeader2 />
 
       {/* 主要内容区域：AI聊天界面 */}
       {/* 使用 flex 布局将左右两部分排列，h-[calc(100vh - ...)] 计算占据除去Header和Footer的高度 */}
@@ -331,7 +332,7 @@ function ChatPage() {
         }}
       >
         {/* 左侧：会话列表 */}
-        <div className="w-64 bg-white/80 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto">
+        <div className="w-64 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto" style={{ background: "rgb(30, 30, 30)" }}>
           <button
             className="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition-colors mb-3 cursor-pointer"
             onClick={() => {
@@ -341,9 +342,9 @@ function ChatPage() {
             新建会话
           </button>
 
-          <h2 className="text-lg font-semibold mb-4 text-black">会话记录</h2>
+          <h2 className="text-lg font-semibold mb-4 text-white">会话记录</h2>
           {Object.keys(chatSessions).length === 0 ? (
-            <div>无会话</div>
+            <div className="text-white">无会话</div>
           ) : (
             <ul>
               {Object.values(chatSessions)
@@ -401,19 +402,26 @@ function ChatPage() {
           )}
         </div>
 
+        {/* 左侧：会话列表 */}
+        <div className="w-300 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto" style={{ background: "rgb(30, 30, 30)" }}>
+          <Chatpdf />
+        </div>
+
         {/* 右侧：聊天区域 */}
         {currentChatId == -1 ? (
-          <main className="flex-1 bg-white/90 rounded-lg flex flex-col shadow-lg overflow-hidden justify-center">
+          <div className="flex-1 bg-white/90 rounded-lg flex flex-col shadow-lg overflow-hidden justify-center" style={{
+            background: "rgb(37, 37, 38)"
+          }}>
             <div className="flex flex-col items-center gap-6 text-center w-full">
               <h1 className="text-black text-6xl md:text-7xl font-bold">
-                Learn About
+                {/* 聊点啥呗？ */}
               </h1>
 
               {/* 搜索输入框 */}
               <div className="relative w-full max-w-xl mt-2">
                 <input
                   type="text"
-                  placeholder="请输入你的问题"
+                  placeholder="聊点啥呗？数学物理当瓜子，边唠边嗑人工智能！"
                   ref={bigInputRef}
                   onChange={(v) => {
                     setInputStr(v.target.value);
@@ -445,21 +453,22 @@ function ChatPage() {
 
               {/* 描述文本 */}
               <div className="text-black/90 max-w-lg text-lg font-normal mt-2">
-                <div>让好奇心，成为你的向导</div>
+                <div style={{ color: "white" }}>让好奇心，成为你的向导</div>
                 <span className="inline-flex items-center">
-                  <strong className="font-semibold">你的专属AI学习伙伴</strong>
+                  <strong className="font-semibold" style={{ color: "white" }}>你的专属AI学习伙伴</strong>
                 </span>
-                <div>有什么想知道的？现在就问我吧！</div>
+                <div style={{ color: "white" }}>有什么想知道的？现在就问我吧！</div>
               </div>
             </div>
-          </main>
+          </div>
         ) : (
-          <div className="flex-1 bg-white/90 rounded-lg flex flex-col shadow-lg overflow-hidden">
+          <div className="flex-1 rounded-lg flex flex-col shadow-lg overflow-hidden" style={{background: "rgb(37, 37, 38)"}}>
             {/* 消息显示区域 */}
             <div
               className="flex-1 p-4 overflow-y-auto flex flex-col-reverse markdown-body"
               ref={chataeraRef}
             >
+
               {/* 使用 flex-col-reverse 让最新的消息在底部，滚动向上 */}
               {chatSessions[currentChatId]?.messages
                 ? Object.values(chatSessions[currentChatId].messages)
@@ -502,11 +511,16 @@ function ChatPage() {
             </div>
 
             {/* 聊天输入区域 */}
-            <div className="p-4 border-t border-gray-200 flex items-center bg-white">
+            <div className="p-4 border-t border-gray-200 flex items-center" style={{background: "rgb(37, 37, 38)"}}>
               <input
                 type="text"
                 placeholder="请输入你的问题..."
-                className="flex-1 rounded-full py-2 px-4 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                style={{
+                  color: "#d4d4d4",
+                  background: "rgb(37, 37, 38)",
+                  border: "1px solid #333"
+                }}
+                className="flex-1 py-2 px-4 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 ref={inputRef}
