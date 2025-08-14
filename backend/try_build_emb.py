@@ -17,7 +17,6 @@ async def embedding(question):
     # 将其转换为JSON字符串以便在Excel中存储
     return json.dumps(embedding_vector)
 
-
 # --- 【核心修改】: 重构主函数以实现增量更新 ---
 async def generate_embedding_save_to_excel():
     """
