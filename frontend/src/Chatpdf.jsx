@@ -25,6 +25,7 @@ class Chatpdf extends PureComponent {
         const page = this.state.pageNumber - 1
         this.setState({ pageNumber: page, pageNumberInput: page })
     }
+
     nextPage = () => {
         if (this.state.pageNumber == this.state.numPages) {
             return
@@ -32,18 +33,22 @@ class Chatpdf extends PureComponent {
         const page = this.state.pageNumber + 1
         this.setState({ pageNumber: page, pageNumberInput: page })
     }
+
     onPageNumberFocus = e => {
         this.setState({ pageNumberFocus: true })
     };
+
     onPageNumberBlur = e => {
         this.setState({ pageNumberFocus: false, pageNumberInput: this.state.pageNumber })
     };
+
     onPageNumberChange = e => {
         let value = e.target.value
         value = value <= 0 ? 1 : value;
         value = value >= this.state.numPages ? this.state.numPages : value;
         this.setState({ pageNumberInput: value })
     };
+
     toPage = e => {
         this.setState({ pageNumber: Number(e.target.value) })
     };
@@ -55,6 +60,7 @@ class Chatpdf extends PureComponent {
         const pageWidth = this.state.pageWidth * 0.8
         this.setState({ pageWidth: pageWidth })
     }
+
     pageZoomIn = () => {
         const pageWidth = this.state.pageWidth * 1.2
         this.setState({ pageWidth: pageWidth })
@@ -74,7 +80,7 @@ class Chatpdf extends PureComponent {
             <div className={styles.view}>
                 <div className={styles.pageContainer}>
                     <Document
-                        file="http://localhost:5173/1.pdf"
+                        file="/1.pdf"
                         onLoadSuccess={this.onDocumentLoadSuccess}
                         loading={<span>加载中...</span>}
                         scale={1.6}

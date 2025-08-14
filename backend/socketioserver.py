@@ -1,6 +1,8 @@
+import asyncio
 from datetime import datetime
 import io
 import json
+import re
 from typing import AsyncGenerator, List
 from pydantic import BaseModel, Field
 import socketio
@@ -118,6 +120,40 @@ class WschatNamespace(socketio.AsyncNamespace):
     async def on_disconnect(self, sid, reason):
         print('disconnect ', sid, reason)
 
+
+    # 辅助函数，用于处理和发送缓冲区内容
+    async def process_buffer(current_buffer: str):        
+        content_to_process = current_buffer.strip()
+        if not content_to_process:
+            return
+
+        payload = {}
+
+        # 联系人工客服按钮
+        if content_to_process.startswith("[BUTTON]"):
+            payload.update({"type": "button", "title": content_to_process.replace("[BUTTON]", "").strip(), "url": "联系客服"})
+        # 动作
+        elif content_to_process.startswith("[ACTION]"):
+            payload.update({"type": "action", "title": content_to_process.replace("[ACTION]", "").strip()})
+        # 小测试
+        elif content_to_process.startswith("[QUIZ]"):
+            payload.update({"type": "quiz", "title": content_to_process.replace("[QUIZ]", "").strip()})
+        # 参考链接
+        elif content_to_process.startswith("[RESOURCE]"):
+            print(content_to_process)
+            pattern = r'\[(.*?)\]\s+?\[(.*?)\]\((.*)'
+            match = re.search(pattern, content_to_process)
+            if match:
+                token_text = match.group(2)
+                url = match.group(3)
+                payload.update({"type": "resource", "title": token_text, "url": f"{url}"})
+        else:
+            payload.update({"type": "text", "content": content_to_process})
+
+        yield json.dumps(payload, ensure_ascii=False)
+        await asyncio.sleep(0.01)
+
+
     async def on_get_text(self, sid, data):
         textin = GetTextIn.model_validate(obj=data)
 
@@ -142,6 +178,7 @@ class WschatNamespace(socketio.AsyncNamespace):
                         await self.emit('response_text', {'data': '没找到会话记录'}, to=sid)
                         return
 
+
                     # 查找该会话的所有历史记录
                     query_stmt = select(
                         TurChatHistory.id, 
@@ -162,7 +199,14 @@ class WschatNamespace(socketio.AsyncNamespace):
                     historyLength = len(history)
 
                     # 整理成上下文提交给大模型
-                    context = []
+                    chat_context = []
+                    
+                    system_prompt = config.LLM_SYSTEM_PROMPT
+                    
+                    # 系统提示词
+                    chat_context.append(Message(role=RoleEnum.system, content=system_prompt))
+
+                    
                     for key, chat in enumerate(history):
                         # 判断用户提供的id与数据库的id是否对应
                         if chat.text == "" and chat.sender == 'ai' and key == historyLength - 1:
@@ -172,18 +216,19 @@ class WschatNamespace(socketio.AsyncNamespace):
                             continue
 
                         if chat.sender == 'user':
-                            context.append(Message(role=RoleEnum.user, content=chat.text))
+                            chat_context.append(Message(role=RoleEnum.user, content=chat.text))
                         else:
-                            context.append(Message(role=RoleEnum.assistant, content=chat.text))
+                            chat_context.append(Message(role=RoleEnum.assistant, content=chat.text))
 
                     text_buffer = io.StringIO()
 
                     # 流式输出到浏览器
-                    async for eachtoken in llmchat(context):
+                    async for eachtoken in llmchat(chat_context):
                         text_buffer.write(eachtoken)
                         await self.emit("token_output", json.dumps({
                             "chat_session_id": textin.chat_session_id,
                             "ai_message_id": textin.ai_message_id,
+                            "type": "text",
                             "token": eachtoken
                         }), to=sid)
 
