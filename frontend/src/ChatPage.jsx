@@ -39,12 +39,12 @@ function ChatPage() {
   const inputRef = useRef(null);
   const bigInputRef = useRef(null);
 
-
-  const newChatSession = async (input, chatId) => {
-    if (input.trim()) {
+  const newChatSession = async (question, chatId) => {
+    let questions = question.trim()
+    if (questions) {
       const data = await APIChatNewMessage({
         chat_session_id: chatId,
-        text: input.trim(),
+        text: questions,
       });
 
       if (data.code != 200) {
@@ -58,6 +58,7 @@ function ChatPage() {
       socket.current.emit("get_text", {
         ai_message_id: data.data.ai_message_id,
         chat_session_id: chatId,
+        question: questions
       });
 
       setInput("");
@@ -167,10 +168,12 @@ function ChatPage() {
   }
 
   // 创建新会话
-  const fetchNewSession = async (text) => {
+  const fetchNewSession = async (question) => {
+    let questions = question.trim()
+
     // 新建会话
     const data1 = await APIChatNewSession({
-      title: text,
+      title: questions,
     });
 
     if (data1.code != 200) {
@@ -186,7 +189,7 @@ function ChatPage() {
     // 插入新消息
     const data2 = await APIChatNewMessage({
       chat_session_id: data1.data.chat_session_id,
-      text: text.trim(),
+      text: questions,
     });
 
     if (data2.code != 200) {
@@ -201,6 +204,7 @@ function ChatPage() {
     socket.current.emit("get_text", {
       ai_message_id: data2.data.ai_message_id,
       chat_session_id: data1.data.chat_session_id,
+      question: questions
     });
 
     setInput("");
@@ -312,6 +316,9 @@ function ChatPage() {
       inputRef.current?.focus();
     }
   }, [currentChatId])
+
+
+  console.log(chatSessions[currentChatId]?.messages)
 
   return (
     <>
