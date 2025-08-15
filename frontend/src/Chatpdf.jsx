@@ -80,7 +80,7 @@ class Chatpdf extends PureComponent {
             <div className={styles.view}>
                 <div className={styles.pageContainer}>
                     <Document
-                        file="/1.pdf"
+                        file="https://turcar.net.cn/1.pdf"
                         onLoadSuccess={this.onDocumentLoadSuccess}
                         loading={<span>加载中...</span>}
                         scale={1.6}
