@@ -410,9 +410,9 @@ function ChatPage() {
         </div>
 
         {/* 左侧：会话列表 */}
-        <div className="w-300 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto" style={{ background: "rgb(30, 30, 30)" }}>
+        {/* <div className="w-300 rounded-lg p-4 mr-4 flex flex-col shadow-lg overflow-y-auto" style={{ background: "rgb(30, 30, 30)" }}>
           <Chatpdf />
-        </div>
+        </div> */}
 
         {/* 右侧：聊天区域 */}
         {currentChatId == -1 ? (

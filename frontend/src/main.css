@@ -1,1 +1,9 @@
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
 @import "tailwindcss";
+
+body {
+  background-color: #c3d6ea; /* A light gray background similar to the screenshot */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

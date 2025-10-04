@@ -47,7 +47,7 @@ const TDSHeader2 = () => {
       <nav className="flex justify-between items-center max-w-screen-xl mx-auto">
         <div className="flex items-center">
           <div className="flex items-center gap-3">
-            <span className="text-white text-lg font-medium">图克教育</span>
+            <span className="text-white text-lg font-medium">智能客服</span>
             <span className="text-white/70 text-xs font-medium border border-black/30 rounded-full px-3 py-1">
               实验性
             </span>
@@ -71,6 +71,26 @@ const TDSHeader2 = () => {
               }
             >
               对话
+            </NavLink>
+
+            <NavLink
+              style={{ color: "white" }}
+              to="/homework"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
+              }
+            >
+              AI作业批改
+            </NavLink>
+
+            <NavLink
+              style={{ color: "white" }}
+              to="/papers"
+              className={({ isActive, isPending }) =>
+                isActive ? active.current : inactive.current
+              }
+            >
+              AI批改进度
             </NavLink>
 
             <NavLink
@@ -143,7 +163,7 @@ const TDSHeader2 = () => {
                 alt="User profile"
                 className="w-9 h-9 rounded-full"
               />
-              <span style={{color: "white"}}>{userinfo?.phone_number}</span>
+              <span style={{ color: "white" }}>{userinfo?.phone_number}</span>
               <span className="cursor-pointer text-white" onClick={() => logout()}>
                 退出
               </span>

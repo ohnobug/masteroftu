@@ -10,6 +10,11 @@ import LoginPage from "./LoginPage.jsx";
 import ForgotPasswordPage from "./ForgotPasswordPage.jsx";
 import RegisterPage from "./RegisterPage.jsx";
 import ChatPage from "./ChatPage.jsx";
+import Homework from "./Homework.jsx";
+import ImageAnnotator from "./ImageAnnotator.jsx";
+import PaperListPage from './PaperListPage';
+import PaperDetailPage from './PaperDetailPage';
+import "tailwindcss";
 import { store } from "./store/index.js";
 import { Provider } from "react-redux";
 
@@ -36,6 +41,22 @@ const router = createBrowserRouter([
       {
         path: "/course",
         element: <CoursePage />,
+      },
+      {
+        path: "/homework",
+        element: <Homework />,
+      },
+      {
+        path: "/image_annotator",
+        element: <ImageAnnotator />
+      },
+      {
+        path: "/papers",
+        element: <PaperListPage />
+      },
+      {
+        path: "/papers/:paperId",
+        element: <PaperDetailPage />
       },
       {
         path: "/learning_paths",
