@@ -12,11 +12,11 @@ from pydantic import BaseModel, Field
 import socketio
 from sqlalchemy import select, update
 import config
-from database import AsyncSessionLocal, TurChatHistory, TurChatSessions
+from db.database import AsyncSessionLocal, TurChatHistory, TurChatSessions
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from openai import AsyncOpenAI
 from enum import Enum
-import database
+import db.database as database
 from utils.utils import get_userInfo_from_token, p
 from utils.chromadb_helpers import chroma_format_knowledge
 

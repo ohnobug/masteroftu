@@ -4,12 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import schemas
 from routers.oauth2_scheme import oauth2_scheme
 from utils.utils import get_userInfo_from_token
-from database import TurChatHistory, TurChatSessions, get_db
+from db.chat_model import TurChatHistory, TurChatSessions
+from db.database import get_db
 
-router = APIRouter()
+router = APIRouter(prefix='/api')
 
 # 获取会话列表
-@router.post("/api/chat_sessions", response_model=schemas.ChatSessionOut)
+@router.post("/chat_sessions", response_model=schemas.ChatSessionOut)
 async def chat_sessions(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -39,9 +40,8 @@ async def chat_sessions(db: AsyncSession = Depends(get_db), token: str = Depends
             data=output
         )
 
-
 # 获取会话的历史信息
-@router.post("/api/chat_history", response_model=schemas.ChatHistoryOut)
+@router.post("/chat_history", response_model=schemas.ChatHistoryOut)
 async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -74,9 +74,8 @@ async def chat_history(request: schemas.ChatHistoryIn, db: AsyncSession = Depend
             data=output
         )
 
-
 # 新建会话
-@router.post("/api/chat_newsession", response_model=schemas.ChatNewsessionOut)
+@router.post("/chat_newsession", response_model=schemas.ChatNewsessionOut)
 async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -103,9 +102,8 @@ async def chat_newsession(request: schemas.ChatNewsessionIn, db: AsyncSession = 
             data=schemas.ChatNewsession(chat_session_id=chatSessionId)
         )
 
-
 # 删除会话
-@router.post("/api/chat_delsession", response_model=schemas.ChatDelsessionOut)
+@router.post("/chat_delsession", response_model=schemas.ChatDelsessionOut)
 async def chat_delsession(request: schemas.ChatDelsessionIn, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -125,9 +123,8 @@ async def chat_delsession(request: schemas.ChatDelsessionIn, db: AsyncSession = 
             message="success",
         )
 
-
 # 发送消息
-@router.post("/api/chat_newmessage", response_model=schemas.ChatNewmessageOut)
+@router.post("/chat_newmessage", response_model=schemas.ChatNewmessageOut)
 async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -166,3 +163,4 @@ async def chat_newmessage(request: schemas.ChatNewmessageIn, db: AsyncSession = 
                 ai_message_id=aiMessageId
             )
         )
+

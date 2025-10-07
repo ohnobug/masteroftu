@@ -13,6 +13,7 @@ services:
       - 3316:3306
     volumes:
       - 'mariadb_data:/bitnami/mariadb'
+      - '/root/xuexiaole:/xuexiaole'
     networks:
       - moodle_network
 
@@ -67,11 +68,57 @@ services:
     networks:
       - moodle_network
 
+  # nlp后台服务
+  async_worker_nlp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile_async_worker_nlp
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=Turcarai2025
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - DB_NAME=tur
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    networks:
+      - moodle_network
+
+  # vision后台服务
+  async_worker_vision:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile_async_worker_nlp
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=Turcarai2025
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - DB_NAME=tur
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    networks:
+      - moodle_network
+
   # 消息队列
   rabbitmq:
-    image: bitnami/rabbitmq:4.1.2
+    image: rabbitmq:4.1.4-management
     environment:
       - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
     ports:
       - "5672:5672"
       - "15672:15672"

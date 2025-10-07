@@ -22,9 +22,9 @@ export rebuild_newmoodle_ws="docker compose -f docker-compose05.yml build newmoo
 export rebuild_nginx="docker compose -f docker-compose05.yml build nginx && docker compose -f docker-compose05.yml down nginx && docker compose -f docker-compose05.yml up nginx -d"
 
 
-# echo -e "\n=======================================\n🚀正在构建Mariadb\n=======================================\n"            && eval $rebuild_mariadb
-# echo -e "\n=======================================\n🚀正在构建moodle\n=======================================\n"             && eval $rebuild_moodle
-# echo -e "\n=======================================\n🚀正在构建前端项目\n=======================================\n"            && eval $buildfrontend
+echo -e "\n=======================================\n🚀正在构建Mariadb\n=======================================\n"            && eval $rebuild_mariadb
+echo -e "\n=======================================\n🚀正在构建moodle\n=======================================\n"             && eval $rebuild_moodle
+echo -e "\n=======================================\n🚀正在构建前端项目\n=======================================\n"            && eval $buildfrontend
 echo -e "\n=======================================\n🚀正在构建rabbitmq\n=======================================\n"           && eval $rebuild_rabbitmq
 echo -e "\n=======================================\n🚀正在构建新官网Socket.io服务\n=======================================\n" && eval $rebuild_newmoodle_ws
 echo -e "\n=======================================\n🚀正在构建新官网接口\n=======================================\n"          && eval $rebuild_newmoodle_api

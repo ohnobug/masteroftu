@@ -8,7 +8,7 @@ from routers.oauth2_scheme import oauth2_scheme
 from sms import BAIDUSMS
 from utils.utils import check_verify_code, generate_numeric_code_randint, get_token, get_userInfo_from_token, password_hash
 import schemas
-from database import TurUsers, TurVerifyCodes, get_db
+from db.database import TurUsers, TurVerifyCodes, get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 创建一个 APIRouter 实例

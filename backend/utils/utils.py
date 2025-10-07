@@ -6,11 +6,11 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy import select, insert, update, func
+from sqlalchemy import select, update, func
 from SimpleCrypto import SimpleCrypto
-from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-import database
-from database import TurUsers, TurVerifyCodes
+from config import SECRET_KEY, ALGORITHM
+import db.database as database
+from db.user_model import TurUsers, TurVerifyCodes
 import random
 from fastapi import HTTPException
 import schemas

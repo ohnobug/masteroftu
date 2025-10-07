@@ -5,10 +5,10 @@ load_dotenv()
 
 # --- Database Configuration ---
 # 请替换成你自己的数据库信息
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", 3308)
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "136404838Zz")
-DB_PORT = os.getenv("DB_PORT", 3308)
-DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "tur")
 DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
@@ -22,9 +22,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
 MAX_SMS_PER_DAY = 5
 SMS_CODE_EXPIRE_MINUTES = 5
 
-RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmqservice:5672/")
-
-
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@127.0.0.1:5672/%2F?connection_attempts=3&heartbeat=3600")
 
 LLM_API_KEY = os.getenv("LLM_API_KEY", "ollama")
 LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://192.168.0.5:11434/v1")
@@ -74,3 +72,19 @@ LLM_SYSTEM_PROMPT = """# 角色与核心任务
 4. **鼓励性互动**: 当用户遇到困难或问题模糊时，使用 [ACTION] 按钮引导他们细化问题，例如 `[ACTION] 换个方式提问`。
 5. **保持教育者角色**: 你的所有互动都应以激发好奇心和加深理解为目标。
 """
+
+VISION_QUEUE_NAME = os.getenv("VISION_QUEUE_NAME", "paper_vision_queue")
+NLP_QUEUE_NAME = os.getenv("NLP_QUEUE_NAME", "question_nlp_queue")
+
+# SiliconFlow API 配置
+SILICONFLOW_API_KEY = os.getenv("SILICONFLOW_API_KEY", "sk-jwcnjpikvwlvkqaodhmtqallesmqoxakvfpigazqdjfqkyxo")
+SILICONFLOW_BASE_URL = os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
+
+# 文件存储目录
+DATA_DIR = os.getenv("DATA_DIR", "./data")
+
+CROPS_DIR = os.getenv("CROPS_DIR", "./data/crops")
+
+# 大语言模型名称
+VISION_MODEL_NAME = os.getenv("VISION_MODEL_NAME", "Qwen/Qwen2.5-VL-32B-Instruct")
+LANGUAGE_MODEL_NAME = os.getenv("LANGUAGE_MODEL_NAME", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B")

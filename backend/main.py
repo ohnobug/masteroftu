@@ -1,19 +1,26 @@
 import sys
+
+import uvicorn
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
-import database
+from db import database
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException
-from routers import chats, users
+from routers import chats, users, papers
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动阶段 (在 yield 之前)
     print("Application startup...")
+    
+    # 这会确保在应用接受任何请求之前，数据库和表就已经创建好了
+    await database.create_db_and_tables()
+    print("Database and tables created.")
+
     yield    
     print("Application shutdown...")
     # 释放数据库 Engine 和连接池
@@ -81,3 +88,13 @@ app.include_router(chats.router)
 
 # 用户路由
 app.include_router(users.router)
+
+# 试卷路由
+app.include_router(papers.router)
+
+if __name__ == "__main__":
+    # 使用 uvicorn 启动 FastAPI 应用
+    # host="0.0.0.0" 表示监听所有可用的 IP 地址，允许局域网访问
+    # port=8000 是服务运行的端口
+    # reload=True 会在代码文件发生变化时自动重启服务，非常适合开发环境
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

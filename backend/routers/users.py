@@ -8,14 +8,15 @@ from routers.oauth2_scheme import oauth2_scheme
 from sms import BAIDUSMS
 from utils.utils import check_verify_code, generate_numeric_code_randint, get_token, get_userInfo_from_token, password_hash
 import schemas
-from database import TurUsers, TurVerifyCodes, get_db
+from db.user_model import TurUsers, TurVerifyCodes
+from db.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # 创建一个 APIRouter 实例
-router = APIRouter()
+router = APIRouter(prefix='/api')
 
 # 登录
-@router.post("/api/login", response_model=schemas.UserLoginRequestOut)
+@router.post("/login", response_model=schemas.UserLoginRequestOut)
 async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(get_db)):
     """
     用户登录
@@ -40,7 +41,7 @@ async def login(request: schemas.UserLoginRequestIn, db: AsyncSession = Depends(
         raise HTTPException(status_code=401, detail="用户密码错误")
 
 # 注册
-@router.post("/api/register", response_model=schemas.UserRegisterRequestOut, summary="用户注册")
+@router.post("/register", response_model=schemas.UserRegisterRequestOut, summary="用户注册")
 async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = Depends(get_db)):
     """
     用户注册
@@ -73,7 +74,7 @@ async def register(request: schemas.UserRegisterRequestIn, db: AsyncSession = De
     )
 
 # 重置密码
-@router.post("/api/reset_password", response_model=schemas.UserResetPasswordRequestOut, summary="重置密码")
+@router.post("/reset_password", response_model=schemas.UserResetPasswordRequestOut, summary="重置密码")
 async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncSession = Depends(get_db)):
     """
     重置密码
@@ -104,7 +105,7 @@ async def reset_password(request: schemas.UserResetPasswordRequestIn, db: AsyncS
     )
 
 # 获取手机验证码
-@router.post("/api/get_verify_code", response_model=schemas.UserGetVerifyCodeRequestOut, summary="获取验证码")
+@router.post("/get_verify_code", response_model=schemas.UserGetVerifyCodeRequestOut, summary="获取验证码")
 async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: AsyncSession = Depends(get_db)):
     # ------------------------------------------------------------------------
     # 60秒内同一手机号不能重复获取验证码
@@ -134,9 +135,11 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
 
     # 调用接口发送验证码
     if request.purpose == schemas.UserGetVerifyCodePurposeEnum.REGISTER:
-        BAIDUSMS.send_register_verify_code(request.phone_number, code)
+        pass
+        # BAIDUSMS.send_register_verify_code(request.phone_number, code)
     elif request.purpose == schemas.UserGetVerifyCodePurposeEnum.FORGOT_PASSWORD:
-        BAIDUSMS.send_reset_password_verify_code(request.phone_number, code)
+        pass
+        # BAIDUSMS.send_reset_password_verify_code(request.phone_number, code)
 
     # 保存验证码
     insert_stmt = insert(TurVerifyCodes).values(
@@ -154,7 +157,7 @@ async def get_verify_code(request: schemas.UserGetVerifyCodeRequestIn, db: Async
     )
 
 # 获取手机验证码列表(测试用)
-@router.get("/api/get_verify_code_list", response_class=HTMLResponse, summary="获取验证码列表")
+@router.get("/get_verify_code_list", response_class=HTMLResponse, summary="获取验证码列表")
 async def get_verify_code_list(db: AsyncSession = Depends(get_db)):
     select_stmt = select(TurVerifyCodes).order_by(TurVerifyCodes.id.desc())
     data = (await db.scalars(select_stmt)).all()
@@ -164,7 +167,7 @@ async def get_verify_code_list(db: AsyncSession = Depends(get_db)):
     script = """
 <script>
 function clearVerifyCodeList() {
-    fetch("/api/clear_verify_code_list", {
+    fetch("/clear_verify_code_list", {
         method: "POST"
     }).then(res => {
         if (res.status == 200) {
@@ -216,7 +219,7 @@ function clearVerifyCodeList() {
 
 
 # 清空手机验证码列表(测试用)
-@router.post("/api/clear_verify_code_list", response_model=schemas.BaseResponse, summary="清空验证码列表")
+@router.post("/clear_verify_code_list", response_model=schemas.BaseResponse, summary="清空验证码列表")
 async def clear_verify_code_list(db: AsyncSession = Depends(get_db)):
     delete_stmt = delete(TurVerifyCodes)
     data = await db.execute(delete_stmt)
@@ -226,7 +229,7 @@ async def clear_verify_code_list(db: AsyncSession = Depends(get_db)):
     return schemas.BaseResponse(code=200, message="清空成功")
 
 # 获取用户信息
-@router.post("/api/userinfo", response_model=schemas.UserInfoRequestOut)
+@router.post("/userinfo", response_model=schemas.UserInfoRequestOut)
 async def userinfo(db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)):
     try:
         userinfo = get_userInfo_from_token(token)
@@ -242,6 +245,6 @@ async def userinfo(db: AsyncSession = Depends(get_db), token: str = Depends(oaut
     )
 
 # test
-@router.post("/api/test", response_class=HTMLResponse)
+@router.post("/test", response_class=HTMLResponse)
 async def test():
     return "hello world"
