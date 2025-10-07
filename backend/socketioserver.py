@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 import socketio
 from sqlalchemy import select, update
 import config
-from db.database import AsyncSessionLocal, TurChatHistory, TurChatSessions
+from db.database import AsyncSessionLocal
+from db.chat_model import TurChatHistory, TurChatSessions
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from openai import AsyncOpenAI
 from enum import Enum

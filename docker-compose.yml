@@ -16,6 +16,21 @@ services:
     networks:
       - moodle_network
 
+
+  # 消息队列
+  rabbitmq:
+    image: rabbitmq:4.1.4-management
+    environment:
+      - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=bitnami
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - moodle_network
+
+
   # moodle系统
   moodle:
     image: docker.io/bitnami/moodle:5.0
@@ -54,26 +69,45 @@ services:
       - BAIDU_SMS_AK=${BAIDU_SMS_AK}
       - BAIDU_SMS_SK=${BAIDU_SMS_SK}
       - BAIDU_SMS_ENDPOINT=${BAIDU_SMS_ENDPOINT}
+      - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
     ports:
       - "8001:8000"
+    volumes:
+      - './data:/app/data'
     restart: unless-stopped
     depends_on:
       - mariadb
     networks:
       - moodle_network
 
-  # 消息队列
-  rabbitmq:
-    image: rabbitmq:4.1.4-management
+  # vision后台服务
+  async_worker_vision:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile_async_worker_vision
     environment:
-      - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=bitnami
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+      - DB_USER=root
+      - DB_PASSWORD=Turcarai2025
+      - DB_PORT=3306
+      - DB_HOST=mariadb
+      - DB_NAME=tur
+      - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
+      - VISION_MODEL_NAME=Qwen/Qwen2.5-VL-32B-Instruct
+      - LANGUAGE_MODEL_NAME=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    volumes:
+      - './data:/app/data'
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 65535
+        hard: 65535
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+      - rabbitmq
     networks:
       - moodle_network
+
 
   # nlp后台服务
   async_worker_nlp:
@@ -89,6 +123,8 @@ services:
       - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
       - VISION_MODEL_NAME=Qwen/Qwen2.5-VL-32B-Instruct
       - LANGUAGE_MODEL_NAME=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+    volumes:
+      - './data:/app/data'
     ulimits:
       nproc: 65535
       nofile:
@@ -101,31 +137,6 @@ services:
     networks:
       - moodle_network
 
-  # vision后台服务
-  async_worker_vision:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile_async_worker_nlp
-    environment:
-      - DB_USER=root
-      - DB_PASSWORD=Turcarai2025
-      - DB_PORT=3306
-      - DB_HOST=mariadb
-      - DB_NAME=tur
-      - RABBITMQ_URL=amqp://user:bitnami@rabbitmq:5672/%2F?connection_attempts=3&heartbeat=3600
-      - VISION_MODEL_NAME=Qwen/Qwen2.5-VL-32B-Instruct
-      - LANGUAGE_MODEL_NAME=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
-    ulimits:
-      nproc: 65535
-      nofile:
-        soft: 65535
-        hard: 65535
-    restart: unless-stopped
-    depends_on:
-      - mariadb
-      - rabbitmq
-    networks:
-      - moodle_network
 
 
   # 对话socket.io服务
@@ -163,6 +174,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8000:8000"
     restart: unless-stopped
     depends_on:
       - moodle
